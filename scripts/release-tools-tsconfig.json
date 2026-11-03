@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    "typeRoots": ["./codex-offline-release-smoke/node_modules/@types"]
+  },
+  "include": ["qoder-native-e2e.mts", "release-progress*.mts", "release-wait*.mts", "release-public-verify*.mts", "release-preflight*.mts", "release-canary*.mts", "basic-release-assets*.mts", "basic-release-assets/*.mts", "testdata/release-public-verify/*.mts", "testdata/release-canary/*.mts"]
+}

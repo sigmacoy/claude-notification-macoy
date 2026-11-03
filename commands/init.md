@@ -1,0 +1,186 @@
+---
+description: Initialize notification resources and create missing shared configuration
+disable-model-invocation: true
+allowed-tools: Bash, AskUserQuestion
+---
+
+# Initialize Agent Notifications
+
+Use the recorded adapter installation and existing resource discovery to locate the platform executable and installer. `PLUGIN_ROOT`, `CLAUDE_PLUGIN_ROOT` and `INSTALL_TARGET_DIR` locate resources only; never derive notification config from them. Binary and plugin names remain unchanged.
+
+Before running any installer/update, use the verified config-capable helper's read-only preflight from the supported top-level setup flow. It must inspect recorded active bundle/custom-root candidates before any cache update, uninstall or refresh. Never guess the newest cache or automatically copy its config. If the helper/preflight is unavailable, stop and retain the working runtime; do not download/run a legacy installer as a fallback. These instructions require the coordinated config-capable runtime/installer; no downloadable bridge release is promised.
+
+For personalized/unknown cache-only settings, stop before the updater. Explain source and selected destination paths without showing contents. Stop old writers and obtain an explicit choice of recovery source. With `NOTIFICATIONS_BIN` set to the verified new helper and `RECOVERY_SOURCE` to the chosen file:
+
+```bash
+"$NOTIFICATIONS_BIN" config path --json
+"$NOTIFICATIONS_BIN" config inspect --json
+# Only after explicit recovery approval and a confirmed missing destination:
+"$NOTIFICATIONS_BIN" config init --from "$RECOVERY_SOURCE"
+```
+
+`--from FILE` validates and imports raw settings into a missing selected destination only. It cannot overwrite valid/invalid existing config, migrate L to N, or reset settings. Resolve invalid existing files explicitly with stopped writers and private recovery copies. Never use bundle copies or links for compatibility. Retry preflight after successful recovery before updating.
+
+After successful resource installation and registration through the supported top-level flow, initialize shared configuration once (a repeated call is safe):
+
+```bash
+"$NOTIFICATIONS_BIN" config init
+"$NOTIFICATIONS_BIN" config inspect --json
+```
+
+Existing valid config is a byte/mode/mtime-preserving no-op. Existing invalid config is an error. Missing automatic config is created at N; existing L remains selected; explicit E selects only that file. See [OS paths and environment rules](../docs/CONFIGURATION.md#manual-configuration). Hooks never initialize config.
+
+If assets/registration succeeded but init failed, report partial success and the safe error/path. Retry only `config init` after resolving the cause; do not repeat downloads or registration. Do not claim success after a failed command. Do not add config writes to low-level asset installers.
+
+Then run `/claude-notifications-go:settings` for [private revision-checked edits](settings.md). Save diagnostics privately; never print raw configuration or expanded secrets.
+
+After a successful plugin install, agent-notify setup runs by default.
+When the installed CLI supports portable `setup-notifications wizard`, that is
+the setup path (`--hooks false --agent-notify true`). The wizard downloads
+the verified portable ZIP for the installed binary's release; Linux first configures
+the supported `navigation=none` policy. Pass
+`--skip-agent-notify` to keep hooks-only setup. If the advertised setup
+command runs and fails, this slash command returns incomplete/nonzero with
+a retry; committed plugin/hooks files stay in place. A missing binary, a CLI
+without the wizard, or a released CLI older than this portable setup path
+skips MCP setup with a warning. An explicit `--agent-notify` reports incomplete.
+
+```bash
+SKIP_AGENT_NOTIFY=false
+SEEN_AGENT_NOTIFY=false
+CONFIGURE_ARGS=()
+quote_shell_command() {
+  local quoted="" arg
+  for arg in "$@"; do
+    quoted="${quoted:+$quoted }$(printf '%q' "$arg")"
+  done
+  printf '%s' "$quoted"
+}
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --skip-agent-notify) SKIP_AGENT_NOTIFY=true; shift ;;
+    --agent-notify) SEEN_AGENT_NOTIFY=true; shift ;;
+    --navigation|--app|--team-id|--allow-unknown-caller|--allow-caller-asserted)
+      [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
+      case "$1" in
+        --navigation) [ "$2" = none ] || { echo "Invalid navigation: $2" >&2; exit 1; } ;;
+        --app)
+          case "$2" in /*) ;; *) echo "App path must be absolute." >&2; exit 1 ;; esac
+          case "$2" in *..*) echo "App path must be a physical path." >&2; exit 1 ;; esac ;;
+      esac
+      CONFIGURE_ARGS+=("$1" "$2"); shift 2 ;;
+    --request-permission|--json) CONFIGURE_ARGS+=("$1"); shift ;;
+    *) echo "unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+if [ "$SEEN_AGENT_NOTIFY" = true ] && [ "$SKIP_AGENT_NOTIFY" = true ]; then
+  echo "--agent-notify and --skip-agent-notify are mutually exclusive." >&2
+  exit 1
+fi
+if [ "$SKIP_AGENT_NOTIFY" = true ] && [ "${#CONFIGURE_ARGS[@]}" -ne 0 ]; then
+  echo "Route flags require --agent-notify." >&2
+  exit 1
+fi
+if [ "$SKIP_AGENT_NOTIFY" != true ]; then
+  nav="" app="" team="" unknown="" asserted=""
+  i=0
+  while [ "$i" -lt "${#CONFIGURE_ARGS[@]}" ]; do
+    case "${CONFIGURE_ARGS[$i]}" in
+      --navigation|--app|--team-id|--allow-unknown-caller|--allow-caller-asserted)
+        i=$((i + 1))
+        [ "$i" -lt "${#CONFIGURE_ARGS[@]}" ] || { echo "Missing value for ${CONFIGURE_ARGS[$((i - 1))]}" >&2; exit 1; }
+        case "${CONFIGURE_ARGS[$((i - 1))]}" in
+          --navigation) nav="${CONFIGURE_ARGS[$i]}" ;;
+          --app) app="${CONFIGURE_ARGS[$i]}" ;;
+          --team-id) team="${CONFIGURE_ARGS[$i]}" ;;
+          --allow-unknown-caller) unknown="${CONFIGURE_ARGS[$i]}" ;;
+          --allow-caller-asserted) asserted="${CONFIGURE_ARGS[$i]}" ;;
+        esac ;;
+      --json|--request-permission) ;;
+      *) echo "unknown option: ${CONFIGURE_ARGS[$i]}" >&2; exit 1 ;;
+    esac
+    i=$((i + 1))
+  done
+  if [ -z "$nav" ] && [ -z "$app" ] && [ -z "$team" ] && [ -z "$unknown" ] && [ -z "$asserted" ]; then
+    CONFIGURE_ARGS+=(--navigation none --allow-unknown-caller true --allow-caller-asserted false --preserve-policy)
+  elif [ "$nav" = none ]; then
+    if [ -n "$app" ] || [ -n "$team" ]; then
+      echo "navigation none cannot combine with --app/--team-id." >&2; exit 1
+    fi
+    case "$unknown" in true|false) ;; *) echo "navigation none requires --allow-unknown-caller and --allow-caller-asserted." >&2; exit 1 ;; esac
+    case "$asserted" in true|false) ;; *) echo "navigation none requires --allow-unknown-caller and --allow-caller-asserted." >&2; exit 1 ;; esac
+  elif [ -n "$nav" ]; then
+    echo "Invalid navigation: $nav" >&2; exit 1
+  elif [ -z "$app" ] || [ -z "$team" ] || [ -z "$unknown" ] || [ -z "$asserted" ]; then
+    echo "Incomplete route; supply --app, --team-id, and both consent flags." >&2; exit 1
+  else
+    case "$unknown" in true|false) ;; *) echo "Invalid allow-unknown-caller: $unknown" >&2; exit 1 ;; esac
+    case "$asserted" in true|false) ;; *) echo "Invalid allow-caller-asserted: $asserted" >&2; exit 1 ;; esac
+  fi
+fi
+INSTALLER="${CLAUDE_PLUGIN_ROOT}/bin/install.sh"
+if ! curl -fsSL https://raw.githubusercontent.com/777genius/agent-notifications/main/bin/install.sh -o "$INSTALLER"; then
+  echo "Installer download failed; resources were not installed." >&2
+  exit 1
+fi
+if ! chmod +x "$INSTALLER" || ! "$INSTALLER"; then
+  echo "Installer failed; agent-notify setup was not attempted." >&2
+  exit 1
+fi
+if [ "$SKIP_AGENT_NOTIFY" != true ]; then
+  case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*|CYGWIN*) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications.bat"; NOTIFY_READY=(-f "$NOTIFY_BIN"); USE_WIZARD=true ;;
+    Darwin|Linux) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications"; NOTIFY_READY=(-x "$NOTIFY_BIN"); USE_WIZARD=true ;;
+    *) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications"; NOTIFY_READY=(-x "$NOTIFY_BIN"); USE_WIZARD=false ;;
+  esac
+  if ! test "${NOTIFY_READY[@]}"; then
+    echo "agent-notify setup skipped; installer binary not found. Plugin install succeeded." >&2
+    [ "$SEEN_AGENT_NOTIFY" != true ] || exit 1
+  elif [ "$USE_WIZARD" = true ] && "$NOTIFY_BIN" --help </dev/null 2>/dev/null | grep -Fq -- 'setup-notifications wizard'; then
+    POLICY_HELP=$("$NOTIFY_BIN" setup-notifications --help </dev/null 2>/dev/null) || POLICY_HELP=""
+    if [[ "$POLICY_HELP" != *--policy-only* || "$POLICY_HELP" != *--preserve-enabled* ]]; then
+      echo "agent-notify setup skipped; installed binary predates portable setup. Plugin/hooks install succeeded. Update to a matching release before enabling MCP." >&2
+      [ "$SEEN_AGENT_NOTIFY" != true ] || exit 1
+      exit 0
+    fi
+    case "$(uname -s 2>/dev/null)" in
+      Darwin|Linux|MINGW*|MSYS*|CYGWIN*)
+        if ! "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled; then
+          printf 'agent-notify configure failed; plugin install files remain. Retry: %s\n' "$(quote_shell_command "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled)" >&2
+          exit 1
+        fi
+        ;;
+    esac
+    wizard=(setup-notifications wizard --action install --install-or-update --agents claude --hooks false --agent-notify true --yes --plugin-root "${CLAUDE_PLUGIN_ROOT}")
+    [ "$SEEN_AGENT_NOTIFY" = true ] || wizard+=(--preserve-existing-units)
+    case "$(uname -s 2>/dev/null)" in
+      MINGW*|MSYS*|CYGWIN*) ;; # The native helper is the installed primary, not this BAT shell launcher.
+      *) wizard+=(--helper "$NOTIFY_BIN") ;;
+    esac
+    if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+      wizard+=(--claude-config "$CLAUDE_CONFIG_DIR")
+      claude_home="$CLAUDE_CONFIG_DIR"
+    else
+      claude_home="${HOME:-${USERPROFILE:-}}"
+      if [ -n "$claude_home" ]; then
+        wizard+=(--claude-config "$claude_home/.claude")
+      fi
+    fi
+    if [ -n "$claude_home" ]; then
+      wizard+=(--claude-mcp-config "$claude_home/.claude.json")
+    fi
+    claude_exec=$(command -v claude 2>/dev/null || true)
+    case "$claude_exec" in
+      /*|[A-Za-z]:/*|[A-Za-z]:\\*) wizard+=(--claude-executable "$claude_exec" --client-executable "$claude_exec") ;;
+    esac
+    if ! "$NOTIFY_BIN" "${wizard[@]}"; then
+      echo "agent-notify setup failed; plugin install files remain. Use the wizard's retry or next resume command above; if absent, rerun /init with the same installed release." >&2
+      case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) echo "On Windows, run that command in PowerShell (the printed quoting is PowerShell syntax)." >&2 ;; esac
+      exit 1
+    fi
+  else
+    echo "agent-notify setup skipped; installed binary lacks portable wizard. Plugin/hooks install succeeded. Update to a matching release before enabling MCP." >&2
+    [ "$SEEN_AGENT_NOTIFY" != true ] || exit 1
+  fi
+fi
+```

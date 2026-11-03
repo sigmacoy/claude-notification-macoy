@@ -1,0 +1,55 @@
+{
+    "name": "claude-notification-macoy",
+    "description": "Claude Notification Macoy - Clean desktop notifications with no emojis for Claude Code",
+    "owner": {
+        "name": "Macoy Bacalla"
+    },
+    "metadata": {
+        "description": "Customized desktop notification plugin for Claude Code",
+        "version": "1.50.0"
+    },
+    "plugins": [
+        {
+            "name": "claude-notifications-go",
+            "displayName": "Claude Notification Macoy",
+            "source": "./",
+            "description": "Clean notifications with no emojis, sound alerts, and click-to-focus for Claude Code",
+            "version": "1.50.0",
+            "author": {
+                "name": "Macoy Bacalla"
+            },
+            "repository": "https://github.com/sigmacoy/claude-notification-macoy",
+            "license": "GPL-3.0",
+            "keywords": [
+                "notifications",
+                "alerts",
+                "productivity",
+                "go",
+                "hooks"
+            ],
+            "category": "productivity",
+            "tags": ["notifications", "hooks", "alerts", "go"]
+        },
+        {
+            "name": "claude-notification-macoy",
+            "displayName": "Claude Notification Macoy",
+            "source": "./",
+            "description": "Clean notifications with no emojis, sound alerts, and click-to-focus for Claude Code",
+            "version": "1.50.0",
+            "author": {
+                "name": "Macoy Bacalla"
+            },
+            "repository": "https://github.com/sigmacoy/claude-notification-macoy",
+            "license": "GPL-3.0",
+            "keywords": [
+                "notifications",
+                "alerts",
+                "productivity",
+                "go",
+                "hooks"
+            ],
+            "category": "productivity",
+            "tags": ["notifications", "hooks", "alerts", "go"]
+        }
+    ]
+}

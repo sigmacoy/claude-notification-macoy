@@ -1,0 +1,73 @@
+#!/bin/bash
+# Shared shell fixture environment. Source this file; it does not run a test.
+test_env_setup() {
+    local base="$1"
+    export HOME="$base/home" USERPROFILE="$base/home"
+    export APPDATA="$base/appdata" LOCALAPPDATA="$base/localappdata"
+    export XDG_CONFIG_HOME="$base/config" XDG_CACHE_HOME="$base/cache"
+    export XDG_DATA_HOME="$base/data" XDG_STATE_HOME="$base/state" XDG_RUNTIME_DIR="$base/run"
+    export XDG_CONFIG_DIRS="$base/config-dirs" XDG_DATA_DIRS="$base/data-dirs"
+    export CODEX_HOME="$base/codex" CLAUDE_HOME="$base/claude" CLAUDE_CONFIG_DIR="$base/claude"
+    export TMPDIR="$base/tmp" TMP="$base/tmp" TEMP="$base/tmp"
+    unset AGENT_NOTIFICATIONS_CONFIG
+    mkdir -p "$HOME" "$APPDATA" "$LOCALAPPDATA" "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" \
+        "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$XDG_RUNTIME_DIR" "$XDG_CONFIG_DIRS" \
+        "$XDG_DATA_DIRS" "$CODEX_HOME" "$CLAUDE_HOME" "$TMPDIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+}
+
+# Keep a finite fixture PATH without moving MSYS executables away from DLLs.
+# MSYS symlinks may be copies; wrappers preserve each original tool location.
+test_env_place_tool() {
+    local source="$1" destination="$2"
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+            printf '#!/bin/bash\nexec %q "$@"\n' "$source" > "$destination"
+            chmod +x "$destination"
+            ;;
+        *) ln -s "$source" "$destination" ;;
+    esac
+}
+
+# Re-enter through env -i before executing fixture code. The readiness flag is
+# shell-local so nested suites also get a fresh environment and sandbox.
+test_env_enter() {
+    [ "${_TEST_ENV_READY:-}" = 1 ] && return 0
+    local script="$1"; shift
+    local base helper result name gomodcache gocache
+    local -a platform_env=() toolchain_env=()
+    helper="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/test-env.sh"
+    base=$(mktemp -d /tmp/agent-notifications-fixture-XXXXXX) || exit 1
+    # Native Windows Python/curl need these to find OS DLLs and executables.
+    for name in SystemRoot SYSTEMROOT WINDIR COMSPEC PATHEXT; do
+        if [ -n "${!name:-}" ]; then platform_env+=("$name=${!name}"); fi
+    done
+    # Suites that build the real Go binary after isolation hand off the
+    # already-prepared caches, then force an offline toolchain. Isolated
+    # install e2e pins http_proxy at 127.0.0.1:1; default GOPROXY/GOSUMDB
+    # and GOTOOLCHAIN=auto would stall there (especially on Windows + Go 1.26).
+    if [ "${TEST_ENV_HANDOFF_GOMODCACHE:-}" = 1 ]; then
+        for name in GOROOT GOPATH GOMODCACHE GOCACHE GOTMPDIR GOMAXPROCS CGO_ENABLED CC CXX; do
+            if [ -n "${!name:-}" ]; then toolchain_env+=("$name=${!name}"); fi
+        done
+        if [ -z "${GOMODCACHE:-}" ] && command -v go >/dev/null 2>&1; then
+            gomodcache=$(GOTOOLCHAIN=local go env GOMODCACHE) || exit 1
+            [ -n "$gomodcache" ] && toolchain_env+=("GOMODCACHE=$gomodcache")
+        fi
+        if [ -z "${GOCACHE:-}" ] && command -v go >/dev/null 2>&1; then
+            gocache=$(GOTOOLCHAIN=local go env GOCACHE) || exit 1
+            [ -n "$gocache" ] && toolchain_env+=("GOCACHE=$gocache")
+        fi
+        toolchain_env+=("GOPROXY=off" "GOSUMDB=off" "GOTOOLCHAIN=local" "GOTELEMETRY=off")
+    fi
+    trap 'rm -rf "$base"' EXIT
+    env -i PATH="$PATH" "${platform_env[@]}" "${toolchain_env[@]}" bash --noprofile --norc -c '
+        _TEST_ENV_READY=1
+        source "$1"
+        test_env_setup "$2"
+        shift 2
+        source "$0"
+    ' "$script" "$helper" "$base" "$@"
+    result=$?
+    exit "$result"
+}

@@ -1,0 +1,89 @@
+import Bowser from "bowser";
+export const agentProducts = ["claude", "codex", "opencode", "gemini", "qoder", "cursor", "pi"] as const;
+export type AgentProduct = (typeof agentProducts)[number];
+export type Product = AgentProduct | "both";
+export type Target = "unknown" | "macos" | "linux" | "windows" | "manual";
+export type Intent = "install" | "update" | "configure";
+export const products = [
+  { value: "claude", label: "Claude" },
+  { value: "codex", label: "Codex CLI" },
+  { value: "both", label: "Claude + Codex" },
+  { value: "opencode", label: "OpenCode" },
+  { value: "gemini", label: "Gemini CLI" },
+  { value: "qoder", label: "Qoder" },
+  { value: "cursor", label: "Cursor CLI" },
+  { value: "pi", label: "Pi" },
+] as const;
+export const targets = [
+  { value: "unknown", label: "Choose target OS" },
+  { value: "macos", label: "macOS" },
+  { value: "linux", label: "Linux" },
+  { value: "windows", label: "Windows · Git Bash" },
+  { value: "manual", label: "Manual instructions" },
+] as const;
+export const intents = ["install", "update", "configure"] as const;
+export const repo = "https://github.com/777genius/agent-notifications";
+export const installerUrl =
+  "https://agent-notifications.com/install.sh";
+export function platformReleaseVersion(snapshot: string, target: Target): string | null {
+  const os = target === "macos" ? "darwin" : target;
+  if (!["darwin", "linux", "windows"].includes(os)) return null;
+  const versions = snapshot.split("\n")
+    .map((line) => line.split("\t"))
+    .filter((row) => row.length === 6 && row[0] === os)
+    .map((row) => row[2]!)
+    .filter((tag) => /^v\d+\.\d+\.\d+$/.test(tag))
+    .map((tag) => tag.slice(1));
+  return [...new Set(versions)].join(" / ") || null;
+}
+export function detectTarget(ua: string, touchPoints = 0): Target {
+  const browser = Bowser.getParser(ua);
+  if (
+    browser.getPlatformType() === "mobile" ||
+    browser.getPlatformType() === "tablet" ||
+    /Android|iPhone|iPad|iPod/i.test(ua) ||
+    (/Macintosh/.test(ua) && touchPoints > 1)
+  )
+    return "unknown";
+  const os = browser.getOSName(true);
+  return os === "macos"
+    ? "macos"
+    : os === "linux"
+      ? "linux"
+      : os === "windows"
+        ? "windows"
+        : "unknown";
+}
+export function command(
+  product: Product | readonly AgentProduct[],
+  target: Target,
+  intent: Intent,
+  agentNotify = true,
+  // Explicit choices replace observer channels; omitted update choices preserve saved channels.
+  channels?: { desktop: boolean; webhook: boolean },
+): string | null {
+  if (intent === "configure" || target === "unknown" || target === "manual")
+    return null;
+  const requested: readonly AgentProduct[] =
+    typeof product === "string"
+      ? product === "both"
+        ? ["claude", "codex"]
+        : [product]
+      : product;
+  const selected = agentProducts.filter((value) => requested.includes(value));
+  if (!selected.length) return null;
+  const hasObserver = selected.some((value) => value !== "claude" && value !== "codex");
+  const channelChoices = channels ?? (intent === "install" ? { desktop: true, webhook: false } : undefined);
+  const hasClaude = selected.includes("claude");
+  const hasCodex = selected.includes("codex");
+  const skip = (hasClaude || hasCodex) && !agentNotify ? " --skip-agent-notify" : "";
+  const channelFlags = hasObserver && channelChoices
+    ? !channelChoices.desktop && !channelChoices.webhook
+      ? " --desktop=false --webhook=false"
+      : `${channelChoices.desktop ? " --desktop" : ""}${channelChoices.webhook ? " --webhook" : ""}`
+    : "";
+  const productFlag = selected.length > 1
+    ? `--products ${selected.join(",")}`
+    : `--product ${selected[0]}`;
+  return `(set -o pipefail; curl -fsSL ${installerUrl} | bash -s -- ${productFlag}${skip}${channelFlags})`;
+}

@@ -1,0 +1,62 @@
+{
+  "notifications": {
+    "desktop": {
+      "enabled": true,
+      "sound": true,
+      "volume": 1.0,
+      "appIcon": "${CLAUDE_PLUGIN_ROOT}/claude_icon_v2.png",
+      "clickToFocus": true,
+      "terminalBundleId": ""
+    },
+    "webhook": {
+      "enabled": false,
+      "preset": "slack",
+      "url": "",
+      "chat_id": "",
+      "format": "json",
+      "headers": {}
+    },
+    "suppressQuestionAfterTaskCompleteSeconds": 12,
+    "suppressQuestionAfterAnyNotificationSeconds": 7,
+    "suppressForSubagents": true,
+    "suppressFilters": []
+  },
+  "statuses": {
+    "agent_stopping": {
+      "title": "Copilot in VS Code",
+      "sound": ""
+    },
+    "task_complete": {
+      "title": "\u2705 Completed",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/task-complete.mp3"
+    },
+    "review_complete": {
+      "title": "\ud83d\udd0d Review",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/review-complete.mp3"
+    },
+    "question": {
+      "title": "\u2753 Question",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/question.mp3"
+    },
+    "plan_ready": {
+      "title": "\ud83d\udccb Plan",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/plan-ready.mp3"
+    },
+    "session_limit_reached": {
+      "title": "\u23f1\ufe0f Session Limit Reached",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/question.mp3"
+    },
+    "api_error": {
+      "title": "\ud83d\udd34 API Error: 401",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/question.mp3"
+    },
+    "api_error_overloaded": {
+      "title": "\ud83d\udd34 API Error",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/question.mp3"
+    },
+    "permission_request": {
+      "title": "\ud83d\udd10 Permission Request",
+      "sound": "${CLAUDE_PLUGIN_ROOT}/sounds/question.mp3"
+    }
+  }
+}
