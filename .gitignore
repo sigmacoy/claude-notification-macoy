@@ -1,6 +1,8 @@
 # Binaries - exclude all platform-specific binaries
 # These are downloaded from GitHub Releases during setup
 bin/claude-notifications-*
+bin/play-notification-*
+bin/play-notification
 bin/*.exe
 bin/*.dll
 bin/*.so

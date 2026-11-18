@@ -24,7 +24,7 @@ A customized, clean desktop macOS notification system and lifecycle hook handler
 - **Click-to-Focus**: Clicking any alert immediately brings your active terminal window or IDE to the front.
 - **Subagent Noise Suppression**: Prevents notification spam by suppressing background subagent completions while still alerting on main agent milestones.
 - **Universal macOS Binary Included**: Comes pre-built with a universal Mach-O binary supporting both **Apple Silicon (M1/M2/M3/M4)** and **Intel Macs**.
-- **✨ Duplicate Notification Prevention**: New `play-notification` binary uses atomic file-lock deduplication to ensure sounds play only once per session per hook event (Stop, Notification, etc.) within a 3-second window — fixes the "double notification" issue when both Stop and Notification hooks fire for the same interaction.
+- ** Duplicate Notification Prevention**: New `play-notification` binary uses atomic file-lock deduplication to ensure sounds play only once per session per hook event (Stop, Notification, etc.) within a 3-second window — fixes the "double notification" issue when both Stop and Notification hooks fire for the same interaction.
 
 ---
 
