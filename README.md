@@ -1,79 +1,36 @@
 # Claude Notification Macoy
 
-A customized, clean desktop macOS notification system and lifecycle hook handler for **Claude Code**. It delivers native audio and visual alerts when agent tasks finish, errors occur, or user input is required — featuring **zero emojis**, clean titles, simplified status bodies, and click-to-focus window management.
+Claude Notification Macoy is a macOS notification system for Claude Code. It sends native desktop alerts with audio when agent tasks finish, errors occur, or user input is required.
 
-![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-blue?style=flat-square&logo=anthropic)
-![macOS](https://img.shields.io/badge/macOS-Supported-black?style=flat-square&logo=apple)
-![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)
-![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)
+This plugin runs on macOS only. It uses native macOS notification infrastructure. Windows and Linux are not supported.
 
-> **Platform**: macOS only. This plugin is designed exclusively for macOS and uses native macOS notification infrastructure (ClaudeNotifier.app, terminal-notifier). Windows and Linux are not supported.
+## Installation (macOS)
 
----
+### Step 1: Download the Repository
 
-## Features
-
-- **No Emojis**: Removed emoji badges for a minimal, professional aesthetic.
-- **Concise Title Formatting**: Notification titles display as `Claude Code - {Project Name}` (or `Claude Code` if no project name is detected).
-- **Minimal Status Bodies**: Messages are streamlined to essential states:
-  - `Done` (for completed tasks and reviews)
-  - `Waiting Input` (for questions, plans, and permission approvals)
-  - `Error` (for agent stops, limits, or API errors)
-- **Session Label Cleanup**: Automatically filters out random internal session hashes (e.g. `bold 06ddb8f7`, `cosmic ba9deea3`) and boilerplate greetings (`"How can I help..."`).
-- **Claude Logo Icon**: Ships with the dedicated Claude icon logo (`claude_icon_v2.png`) bundled directly into the notification alert.
-- **Click-to-Focus**: Clicking any alert immediately brings your active terminal window or IDE to the front.
-- **Subagent Noise Suppression**: Prevents notification spam by suppressing background subagent completions while still alerting on main agent milestones.
-- **Universal macOS Binary Included**: Comes pre-built with a universal Mach-O binary supporting both **Apple Silicon (M1/M2/M3/M4)** and **Intel Macs**.
-- ** Duplicate Notification Prevention**: New `play-notification` binary uses atomic file-lock deduplication to ensure sounds play only once per session per hook event (Stop, Notification, etc.) within a 3-second window — fixes the "double notification" issue when both Stop and Notification hooks fire for the same interaction.
-
----
-
-## Notification Output Format
-
-| Trigger Event | Notification Title | Notification Body | Audio Cue |
-| :--- | :--- | :--- | :--- |
-| **Task Complete** | `Claude Code - [Project Name]` | `Done` | `task-complete.mp3` |
-| **Review Complete** | `Claude Code - [Project Name]` | `Done` | `review-complete.mp3` |
-| **User Question** | `Claude Code - [Project Name]` | `Waiting Input` | `question.mp3` |
-| **Plan Ready** | `Claude Code - [Project Name]` | `Waiting Input` | `plan-ready.mp3` |
-| **Permission Request** | `Claude Code - [Project Name]` | `Waiting Input` | `question.mp3` |
-| **Error / Interruption** | `Claude Code - [Project Name]` | `Error` | `error.mp3` |
-
----
-
-## Installation
-
-Users should download or clone this GitHub repository directly to their machine.
-
-### Step 1: Download or Clone the Repository
-
-Open your terminal and clone the repository:
+Open Terminal and run:
 
 ```bash
 git clone https://github.com/sigmacoy/claude-notification-macoy.git
 cd claude-notification-macoy
 ```
 
-*(Alternatively, download the ZIP from GitHub by clicking **Code > Download ZIP**, and extract it into a folder).*
+Or download the ZIP from GitHub (Code > Download ZIP) and extract it.
 
----
+### Step 2: Verify Binaries
 
-### Step 2: Verify Permissions and Binaries
-
-Run the setup script to verify executable permissions and pre-compiled binaries:
+Run the setup script:
 
 ```bash
 chmod +x setup.sh bin/*
 ./setup.sh
 ```
 
-> **Note**: Pre-compiled universal binaries for macOS (Apple Silicon + Intel) and the native `ClaudeNotifier.app` bundle are already included in the `bin/` directory. The `play-notification` binary is also included for duplicate sound prevention.
-
----
+Pre-compiled universal binaries for Apple Silicon and Intel Macs are included in the `bin/` directory. The `ClaudeNotifier.app` bundle and `play-notification` binary are also included.
 
 ### Step 3: Register the Plugin in Claude Code
 
-Open Claude Code and add your downloaded repository folder as a local marketplace:
+Open Claude Code and run:
 
 ```text
 /plugin marketplace add /absolute/path/to/claude-notification-macoy
@@ -81,45 +38,68 @@ Open Claude Code and add your downloaded repository folder as a local marketplac
 /claude-notifications-go:init
 ```
 
-*(Replace `/absolute/path/to/claude-notification-macoy` with the real path where you cloned or extracted the repository, e.g. `pwd`).*
-
----
+Replace `/absolute/path/to/claude-notification-macoy` with the real path (use `pwd` to get it).
 
 ### Step 4: Restart Claude Code
 
-Restart Claude Code once for the lifecycle hooks to activate. Your custom notifications will now trigger on events!
+Restart Claude Code. The lifecycle hooks will activate. Custom notifications will trigger on events.
 
----
+## Features
 
-## Configuration & Preferences
+- **No emojis** — Clean, professional appearance
+- **Concise titles** — Format: `Claude Code - [Project Name]` (or `Claude Code` if no project name)
+- **Minimal status bodies** — Three states only:
+  - `Done` — Task or review completed
+  - `Waiting Input` — Question, plan, or permission request
+  - `Error` — Agent stop, limit, or API error
+- **Session label cleanup** — Removes internal session hashes and boilerplate greetings
+- **Claude logo icon** — Bundled `claude_icon_v2.png` appears in notifications
+- **Click-to-focus** — Click a notification to bring your terminal or IDE to front
+- **Subagent noise suppression** — Background subagent completions do not trigger alerts
+- **Universal macOS binary** — Supports Apple Silicon (M1/M2/M3/M4) and Intel Macs
+- **Duplicate notification prevention** — `play-notification` binary uses file-lock deduplication. Sounds play once per session per hook event within a 3-second window.
+
+## Notification Output Format
+
+| Trigger Event | Title | Body | Audio |
+|---------------|-------|------|-------|
+| Task Complete | `Claude Code - [Project Name]` | `Done` | task-complete.mp3 |
+| Review Complete | `Claude Code - [Project Name]` | `Done` | review-complete.mp3 |
+| User Question | `Claude Code - [Project Name]` | `Waiting Input` | question.mp3 |
+| Plan Ready | `Claude Code - [Project Name]` | `Waiting Input` | plan-ready.mp3 |
+| Permission Request | `Claude Code - [Project Name]` | `Waiting Input` | question.mp3 |
+| Error / Interruption | `Claude Code - [Project Name]` | `Error` | error.mp3 |
+
+## Configuration
 
 ### Interactive Settings
 
-To configure notification sounds, volumes, and alert toggles interactively inside Claude Code:
+Run inside Claude Code:
 
 ```text
 /claude-notifications-go:settings
 ```
 
-This interactive menu allows you to:
-- Test and preview notification sounds (`sound-preview`)
+The menu lets you:
+- Test notification sounds
 - Adjust volume (0.0 to 1.0)
-- Enable or disable alerts for specific trigger events
+- Enable or disable alerts for specific events
 - Toggle Click-to-Focus
-- Configure deduplication window (default: 3 seconds)
+- Set deduplication window (default: 3 seconds)
 
 ### Configuration File
 
-To view the path to your active configuration file:
+View the config path:
 
 ```bash
 ./bin/claude-notifications config path
 ```
 
-Configurations are stored at:
-- **macOS**: `~/.claude/claude-notifications-go/config.json`
+Config file location on macOS:
+`~/.claude/claude-notifications-go/config.json`
 
-Example `config.json`:
+Example configuration:
+
 ```json
 {
   "notifications": {
@@ -137,50 +117,31 @@ Example `config.json`:
 }
 ```
 
----
-
-## The Duplicate Notification Fix (Technical Details)
+## How Duplicate Prevention Works
 
 ### The Problem
 
-Claude Code fires **two hooks** for the same user interaction:
-1. **Stop** hook — fires when the agent finishes responding
-2. **Notification** hook — fires for permission prompts, questions, etc.
+Claude Code fires two hooks for the same interaction:
+1. **Stop** hook — Agent finishes responding
+2. **Notification** hook — Permission prompt or question appears
 
-Both hooks would independently play notification sounds, resulting in **duplicate audio** — the first one often cutting off or sounding "bad."
+Both hooks played sounds. This caused duplicate audio.
 
-### The Solution: `play-notification` Binary
+### The Solution
 
-A dedicated Go binary (`bin/play-notification`) handles sound playback with **atomic file-lock deduplication**:
+The `play-notification` binary handles sound playback with atomic file-lock deduplication:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Hook Event (Stop, Notification, SubagentStop, etc.)        │
-└─────────────────────┬───────────────────────────────────────┘
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Notifier.SendDesktop()                                     │
-│  • Passes sessionID + hookEvent to sendOptions              │
-└─────────────────────┬───────────────────────────────────────┘
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│  playSoundDetached() spawns:                                │
-│  ./play-notification -sound <file> -session <id> -hook <evt>│
-└─────────────────────┬───────────────────────────────────────┘
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│  play-notification (deduplication logic):                   │
-│  1. Build lock key: "sessionID-hookEvent" (e.g., "abc-Stop")│
-│  2. Check ~/.tmp/claude-play-notification-<key>.lock        │
-│  3. If lock exists AND age < 3s → EXIT (suppressed)         │
-│  4. Else: create lock atomically (O_EXCL), play sound       │
-│  5. Background goroutine cleans up lock after window + 1s   │
-└─────────────────────────────────────────────────────────────┘
-```
+1. Hook event occurs (Stop, Notification, SubagentStop, TeammateIdle)
+2. Notifier calls `play-notification` with session ID and hook event
+3. Binary builds lock key: `sessionID-hookEvent` (example: `abc-Stop`)
+4. Binary checks `~/.tmp/claude-play-notification-<key>.lock`
+5. If lock exists and is less than 3 seconds old — exit (suppressed)
+6. Otherwise — create lock atomically, play sound
+7. Background process cleans up lock after window plus 1 second
 
-**Result**: Only the first hook event plays the sound. Subsequent hooks within 3 seconds for the same session+event are silently suppressed.
+Result: Only the first hook event plays the sound. Subsequent hooks within 3 seconds for the same session and event are suppressed.
 
-### Hook Events Protected
+### Protected Hook Events
 
 | Hook Event | Lock Key Suffix | Use Case |
 |------------|-----------------|----------|
@@ -189,116 +150,111 @@ A dedicated Go binary (`bin/play-notification`) handles sound playback with **at
 | `SubagentStop` | `-SubagentStop` | Subagent completion |
 | `TeammateIdle` | `-TeammateIdle` | Team collaboration |
 
----
-
 ## Testing Notifications
 
-You can verify that notifications work properly directly from your terminal:
+Run from Terminal:
 
 ```bash
-# Test a completion hook (Stop event)
+# Test completion hook (Stop event)
 echo '{"session_id":"test","transcript_path":""}' | ./bin/claude-notifications handle-hook Stop
 
 # Test manual notification
 ./bin/claude-notifications notify
 
-# Test play-notification binary directly (with deduplication)
+# Test play-notification directly (with deduplication)
 ./bin/play-notification -sound "sounds/task-complete.mp3" -session "test-123" -hook "Stop"
 
-# Test deduplication - run twice within 3 seconds, second is suppressed
+# Test deduplication — run twice within 3 seconds, second is suppressed
 ./bin/play-notification -sound "sounds/task-complete.mp3" -session "test-123" -hook "Stop"
 ./bin/play-notification -sound "sounds/task-complete.mp3" -session "test-123" -hook "Stop"  # suppressed
 ```
 
----
-
 ## macOS Permissions
 
-On macOS 10.15+, macOS requires notification permissions for terminal applications:
+On macOS 10.15 and later, Terminal applications need notification permissions:
 
-1. Open **System Settings > Notifications**.
-2. Locate **Agent Notifications** or your terminal application (e.g., Terminal, iTerm2, Ghostty, Warp, Alacritty, VS Code).
-3. Ensure **Allow Notifications** is enabled and **Alert style** is set to **Banners** or **Alerts**.
+1. Open **System Settings > Notifications**
+2. Find **Agent Notifications** or your terminal app (Terminal, iTerm2, Ghostty, Warp, Alacritty, VS Code)
+3. Enable **Allow Notifications**
+4. Set **Alert style** to **Banners** or **Alerts**
 
----
+## Building From Source (Developers)
 
-## 🔨 Building From Source (Developers)
+### Prerequisites
 
-If you modify the Go source code in `cmd/` or `internal/` and wish to rebuild the binaries:
+- Go 1.21 or later (`go version`)
 
-1. **Prerequisites**: Go 1.21+ installed (`go version`).
-2. Run `make build`:
-   ```bash
-   make build
-   ```
-3. Test your build:
-   ```bash
-   ./bin/claude-notifications version
-   ./bin/play-notification -version
-   ```
+### Build
+
+```bash
+make build
+```
+
+### Test Build
+
+```bash
+./bin/claude-notifications version
+./bin/play-notification -version
+```
 
 ### Cross-Platform Build (macOS only)
 
 ```bash
-# Build optimized release binaries for macOS (both architectures)
 make build-all
 ```
 
----
+This creates optimized release binaries for both architectures.
 
 ## Project Structure
 
-```text
+```
 claude-notification-macoy/
 ├── .claude-plugin/
-│   ├── marketplace.json        # Marketplace definition for Claude Code
-│   └── plugin.json             # Plugin definition and command registrations
+│   ├── marketplace.json        # Marketplace definition
+│   └── plugin.json             # Plugin definition and commands
 ├── assets/                     # Notification icon assets
 │   ├── icon.png
 │   └── icon_v2.png             # Custom Claude logo icon
 ├── bin/
-│   ├── ClaudeNotifier.app      # Standalone native macOS notification bundle
+│   ├── ClaudeNotifier.app      # Native macOS notification bundle
 │   ├── claude-notifications    # Universal binary (Apple Silicon + Intel)
-│   ├── play-notification       # Sound playback with deduplication
-│   ├── hook-wrapper.sh         # POSIX wrapper for hook execution
-│   └── setup.sh                # Helper setup script
+│   ├── play-notification       # Sound player with deduplication
+│   ├── hook-wrapper.sh         # POSIX hook wrapper
+│   └── setup.sh                # Setup verification script
 ├── cmd/
 │   ├── claude-notifications/   # Main CLI and hook entry point
-│   ├── play-notification/      # Dedicated sound player with deduplication
+│   ├── play-notification/      # Sound player with deduplication
 │   ├── sound-preview/          # Sound preview utility
 │   └── list-sounds/            # List available sounds
-├── commands/                   # Claude Code slash commands (/init, /settings, etc.)
+├── commands/                   # Slash commands (/init, /settings)
 ├── config/
 │   └── config.json             # Default configuration template
 ├── hooks/
-│   └── hooks.json              # Hook event bindings (PreToolUse, Stop, Notification, SubagentStop, TeammateIdle)
+│   └── hooks.json              # Hook event bindings
 ├── internal/
-│   ├── notifier/               # Desktop notification presentations and formatters
-│   ├── summary/                # Notification body and status text summarizer
-│   ├── sessionname/            # Session label and prefix filters
-│   ├── hooks/                  # Hook handling logic with deduplication
-│   ├── audio/                  # Audio playback (malgo/miniaudio)
-│   ├── platform/               # Platform-specific utilities
-│   └── ...
-├── sounds/                     # Bundled audio prompt cues (.mp3)
+│   ├── notifier/               # Desktop notification formatters
+│   ├── summary/                # Notification body summarizer
+│   ├── sessionname/            # Session label filters
+│   ├── hooks/                  # Hook handling with deduplication
+│   ├── audio/                  # Audio playback
+│   └── platform/               # Platform utilities
+├── sounds/                     # Audio cues (.mp3)
 │   ├── task-complete.mp3
 │   ├── review-complete.mp3
 │   ├── question.mp3
 │   ├── plan-ready.mp3
 │   └── error.mp3
 ├── claude_icon_v2.png          # High-resolution Claude icon
-├── Makefile                    # Build and development recipes
-├── README.md                   # Documentation and user guide
-└── setup.sh                    # Top-level setup verification script
+├── Makefile                    # Build recipes
+├── README.md                   # This file
+└── setup.sh                    # Top-level setup script
 ```
-
----
 
 ## Sharing With Others
 
 ### Option 1: Share the Repository (Recommended)
 
-1. Push this repository to GitHub (or your preferred Git host)
+1. Push to GitHub
 2. Others clone and install:
    ```bash
    git clone https://github.com/YOUR_USERNAME/claude-notification-macoy.git
@@ -315,8 +271,8 @@ claude-notification-macoy/
 
 ### Option 2: Distribute Pre-Built Binaries
 
-1. Run `make build-all` to create optimized binaries in `dist/`
-2. Share the `dist/` folder containing:
+1. Run `make build-all` to create binaries in `dist/`
+2. Share the `dist/` folder:
    - `claude-notifications-darwin-amd64` (Intel Macs)
    - `claude-notifications-darwin-arm64` (Apple Silicon Macs)
    - `play-notification-darwin-amd64`
@@ -325,6 +281,4 @@ claude-notification-macoy/
 
 ### Option 3: Package as a Plugin Release
 
-See the release workflows in `.github/workflows/` for automated signing, notarization, and distribution via GitHub Releases.
-
----
+See `.github/workflows/` for automated signing, notarization, and GitHub Releases distribution.
