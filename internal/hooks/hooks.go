@@ -744,18 +744,42 @@ func (h *Handler) HandleHook(hookEvent string, input io.Reader) error {
 		}
 	}
 
-	// Release the cross-hook content lock before any delivery work. Desktop
-	// delivery may intentionally sleep for notifyDelaySeconds, and holding this
-	// lock during that delay would make concurrent hooks skip notifications.
-	releaseContentLock()
+	// Update notification state BEFORE releasing content lock and sending notifications.
+	// This ensures that concurrent hooks (e.g., Notification followed by Stop) will see
+	// the updated state and the content dedup checks will catch duplicates.
+	// Determine if we can update state early (before releasing content lock).
+	// For webhook: always delivered when queued.
+	// For desktop with delay=0: check focus/DND now (no delay), if not suppressed, update early.
+	// For desktop with delay>0: must wait for callback after delay.
+	webhookEnabled := h.cfg.IsStatusWebhookEnabled(string(status))
+	desktopEnabled := h.cfg.IsStatusDesktopEnabled(string(status))
+	notifyDelay := h.cfg.GetNotifyDelaySeconds()
 
-	// Send notifications
-	bench.Start("notify.send")
-	recordedDelivery := false
-	delivery := h.sendNotifications(status, body, actions, ev.Session.SessionID, ev.Session.CWD, func() {
-		recordedDelivery = true
+	canUpdateStateEarly := webhookEnabled ||
+		(desktopEnabled && notifyDelay == 0 && !h.wouldSuppressDesktopNotification(status, ev.Session.SessionID, ev.Session.CWD))
+
+	// Update state early if we know notification will be delivered.
+	if canUpdateStateEarly {
 		if err := h.stateMgr.UpdateLastNotificationWithIdentity(keys.stateKey, status, message, stopHash, body, turnTS, hookEvent); err != nil {
 			logging.Warn("Failed to update last notification: %v", err)
+		}
+	}
+
+	// Release content lock before any delivery work (including notifyDelaySeconds sleep).
+	releaseContentLock()
+
+	// Send notifications. For early-update cases, callback only tracks delivery.
+	// For delayed desktop, callback updates state and tracks delivery.
+	bench.Start("notify.send")
+	recordedDelivery := false
+	stateUpdatedInCallback := false
+	delivery := h.sendNotifications(status, body, actions, ev.Session.SessionID, ev.Session.CWD, hookEvent, func() {
+		recordedDelivery = true
+		if !canUpdateStateEarly && !stateUpdatedInCallback {
+			if err := h.stateMgr.UpdateLastNotificationWithIdentity(keys.stateKey, status, message, stopHash, body, turnTS, hookEvent); err != nil {
+				logging.Warn("Failed to update last notification: %v", err)
+			}
+			stateUpdatedInCallback = true
 		}
 	}, h.notificationDetails(ev, insight))
 	bench.Elapsed("notify.send")
@@ -844,7 +868,7 @@ func (h *Handler) handleTeammateIdle(ev Event, p TeammateIdlePayload) error {
 	if stateKey == "" {
 		stateKey = ev.Session.SessionID
 	}
-	h.sendNotifications(status, body, "", ev.Session.SessionID, ev.Session.CWD, func() {
+	h.sendNotifications(status, body, "", ev.Session.SessionID, ev.Session.CWD, "TeammateIdle", func() {
 		if err := h.stateMgr.UpdateLastNotificationWithIdentity(stateKey, status, body, "", body, "", "TeammateIdle"); err != nil {
 			logging.Warn("TeammateIdle: failed to update notification state: %v", err)
 		}
@@ -1170,7 +1194,8 @@ func joinMessageParts(body, actions string) string {
 //
 // body is the summary text (no metadata prefix, no action segments).
 // actions is the formatted action summary (e.g. "📝 1 new  ▶ 2 cmds  ⏱ 41s") or "".
-func (h *Handler) sendNotifications(status analyzer.Status, body, actions, sessionID, cwd string, onFirstDelivery func(), details ...hookNotificationDetails) notificationDelivery {
+// hookEvent is the hook event name (e.g., "Stop", "Notification") for sound deduplication.
+func (h *Handler) sendNotifications(status analyzer.Status, body, actions, sessionID, cwd, hookEvent string, onFirstDelivery func(), details ...hookNotificationDetails) notificationDelivery {
 	// Add panic recovery to prevent notification failures from crashing the plugin
 	defer errorhandler.HandlePanic()
 
@@ -1237,6 +1262,8 @@ func (h *Handler) sendNotifications(status analyzer.Status, body, actions, sessi
 			SessionName: label, Branch: gitBranch, Folder: folderName,
 			Body: joined, Question: question,
 		}))
+		// Pass hookEvent for sound deduplication
+		opts = append(opts, notifier.WithHookEvent(hookEvent))
 		delivery.desktopDelivered = h.sendDesktopNotification(status, enhancedMessage, sessionID, cwd, opts...)
 		if delivery.desktopDelivered && !delivery.webhookQueued && onFirstDelivery != nil {
 			onFirstDelivery()
@@ -1316,6 +1343,24 @@ func (h *Handler) sendDesktopNotification(status analyzer.Status, message, sessi
 	}
 
 	return true
+}
+
+// wouldSuppressDesktopNotification checks if a desktop notification would be suppressed
+// by focus or DND (suppress mode), without waiting for notifyDelaySeconds.
+// This is used to decide whether to update notification state early.
+// Display sleep only mutes sound, doesn't suppress, so it's not checked here.
+func (h *Handler) wouldSuppressDesktopNotification(status analyzer.Status, sessionID, cwd string) bool {
+	// Check focus suppression (notifyOnlyWhenUnfocused)
+	if h.cfg.ShouldNotifyOnlyWhenUnfocused() && isTerminalFocused(sessionID, cwd) {
+		return true
+	}
+
+	// Check DND suppress mode
+	if mode := h.cfg.GetDoNotDisturbMode(); mode == config.DNDModeSuppress && isDoNotDisturb() {
+		return true
+	}
+
+	return false
 }
 
 // isSubagentTranscript checks if the transcript path indicates a subagent session.

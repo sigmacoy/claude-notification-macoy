@@ -145,12 +145,10 @@ open coverage.html
 
 GitHub Actions run on every push:
 
-- **ci-ubuntu.yml** — Tests on Ubuntu
-- **ci-macos.yml** — Tests on macOS
-- **ci-windows.yml** — Tests on Windows
+- **ci-macos.yml** — Tests on macOS (Apple Silicon & Intel)
 - **release.yml** — Builds and publishes release binaries
 
-All three platform CIs must pass before merging.
+macOS CI must pass before merging.
 
 ## Submitting Changes
 

@@ -2,10 +2,8 @@
 
 # Platform Support
 
-**Supported platforms:**
+**Supported platform:**
 - macOS (Intel & Apple Silicon)
-- Linux (x64 & ARM64)
-- Windows 10+ (x64)
 
 **Self-contained runtime after setup:**
 - ✅ Binaries auto-download from GitHub Releases
@@ -13,15 +11,11 @@
 - ✅ All libraries bundled
 - ✅ Works offline after first setup
 
-**Windows-specific features:**
-- Native Toast notifications (Windows 10+)
-- After installation, notifications work in PowerShell, CMD, Git Bash, or WSL
-- MP3/WAV/OGG/FLAC audio playback via native Windows APIs
-- System sounds not accessible - use built-in MP3s or custom files
+> **Note**: This plugin is macOS only. Windows and Linux are not supported.
 
-### Click-to-Focus (macOS & Linux)
+### Click-to-Focus (macOS)
 
-Clicking a notification activates your terminal window. Auto-detects terminal and platform.
+Clicking a notification activates your terminal window. Auto-detects terminal.
 
 **macOS** — via AX API with bundle ID detection:
 
@@ -34,22 +28,8 @@ Clicking a notification activates your terminal window. Auto-detects terminal an
 | kitty, WezTerm, Alacritty, Hyper, Apple Terminal | AXTitle (focus-window subcommand) |
 | Any other (custom `terminalBundleId`) | AXTitle (focus-window subcommand) |
 
-**Linux** — via D-Bus daemon with automatic compositor detection:
-
-| Terminal | Supported compositors |
-|----------|----------------------|
-| VS Code | GNOME, KDE, Sway, X11 |
-| Warp | GNOME, KDE, Sway, X11 — exact pane via `WARP_FOCUS_URL` |
-| GNOME Terminal, Konsole, Alacritty, kitty, WezTerm, Tilix, Terminator, XFCE4 Terminal, MATE Terminal | GNOME, KDE, Sway, X11 |
-| JetBrains IDEs (IntelliJ IDEA, PhpStorm, WebStorm, PyCharm, GoLand, …) | GNOME, KDE, Sway, X11 — the IDE window, not the terminal tab |
-| Any other | Fallback by name |
-
-Linux focus methods (tried in order): Warp session URL (`xdg-open`), GNOME extension, GNOME Shell Eval, GNOME FocusApp, wlrctl (Sway/wlroots), kdotool (KDE), xdotool (X11).
-
-**Multiplexers:** tmux and kitty (macOS only), zellij and WezTerm (macOS & Linux) — click switches to the correct pane/tab. Linux zellij targets the exact pane; see the [Click-to-Focus Guide](CLICK_TO_FOCUS.md#multiplexers) for the full per-platform breakdown.
+**Multiplexers:** tmux and kitty (macOS only) — click switches to the correct pane/tab.
 
 **iTerm2 note:** to open the exact iTerm2 tab or split pane, enable `iTerm2 > Settings > General > Magic > Enable Python API`. If you just toggled it, restart iTerm2 once. Without the Python API, the plugin falls back to app-level iTerm activation instead of exact tab targeting.
-
-**Windows** — clicking a notification raises the originating terminal **window** (Windows Terminal, VS Code, conhost, …) via a protocol-activated toast. Window-level only: tab/split-pane targeting isn't possible (one window hosts all tabs), and picking among multiple WT windows in one process is best-effort. See the guide for details.
 
 See **[Click-to-Focus Guide](CLICK_TO_FOCUS.md)** for configuration details.

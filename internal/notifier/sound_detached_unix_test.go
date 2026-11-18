@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,11 @@ import (
 // detached play-sound child must write its diagnostics into the same
 // notification-debug.log as the parent instead of /dev/null.
 func TestPlaySoundDetached_ChildStderrReachesDebugLog(t *testing.T) {
+	// Set CLAUDE_PLUGIN_ROOT so findPlayNotificationBinary can locate the binary
+	_, thisFile, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
+	t.Setenv("CLAUDE_PLUGIN_ROOT", projectRoot)
+
 	logRoot := t.TempDir()
 	if _, err := logging.InitLogger(logRoot); err != nil {
 		t.Fatalf("InitLogger: %v", err)
@@ -40,7 +46,7 @@ func TestPlaySoundDetached_ChildStderrReachesDebugLog(t *testing.T) {
 	n := New(cfg)
 	t.Cleanup(func() { _ = n.Close() })
 
-	n.playSoundDetached(sound)
+	n.playSoundDetached(sound, sendOptions{})
 
 	logPath := filepath.Join(logRoot, "notification-debug.log")
 	deadline := time.Now().Add(5 * time.Second)

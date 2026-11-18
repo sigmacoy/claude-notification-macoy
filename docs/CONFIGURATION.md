@@ -52,16 +52,10 @@ One file is selected per environment context: explicit **E**, otherwise existing
 | Selection | Native file path |
 |---|---|
 | E: `AGENT_NOTIFICATIONS_CONFIG` | An absolute **file**, not a directory |
-| L: existing legacy file, macOS/Linux | `$HOME/.claude/claude-notifications-go/config.json` |
-| L: existing legacy file, Windows | `%USERPROFILE%\.claude\claude-notifications-go\config.json` |
-| N: fresh macOS | `$HOME/Library/Application Support/agent-notifications/config.json` |
-| N: fresh Linux | Absolute nonempty `$XDG_CONFIG_HOME/agent-notifications/config.json`, otherwise `$HOME/.config/agent-notifications/config.json` |
-| N: fresh Windows, safe profile | `%APPDATA%\agent-notifications\config.json` |
-| N: Windows sandbox profile, no existing config | Absolute `%PROGRAMDATA%` (native KnownFolder if unset) + `agent-notifications-<Windows user SID>\config.json` |
+| L: existing legacy file | `$HOME/.claude/claude-notifications-go/config.json` |
+| N: fresh | `$HOME/Library/Application Support/agent-notifications/config.json` |
 
-Relative XDG_CONFIG_HOME is ignored with a diagnostic. Windows uses USERPROFILE for L, not Git Bash HOME; missing/relative APPDATA without L is an error. macOS ignores XDG_CONFIG_HOME. Missing home in automatic mode is an error; a valid explicit E supports portable contexts without HOME/APPDATA.
-
-Unset E enables automatic selection; set-empty, whitespace-only, relative, `~/file` and invalid native paths are errors, never fallback. The resolver does not expand variables or tilde in E. Expand them in the calling shell if intended; Git Bash may use `cygpath -w` to supply a native absolute Windows path. Do not trim legitimate spaces in filenames.
+Unset E enables automatic selection; set-empty, whitespace-only, relative, `~/file` and invalid native paths are errors, never fallback. The resolver does not expand variables or tilde in E. Expand them in the calling shell if intended. Do not trim legitimate spaces in filenames.
 
 For writable targets, `.lock` filenames and generated `.tmp-<32 hex digits>` / `.backup-<32 hex digits>` names are reserved for coordination and recovery metadata. Choose another filename for a portable config.
 
@@ -69,138 +63,7 @@ If L and N both exist, L wins with a diagnostic even if identical or N is newer.
 
 `config init` is create-only: existing valid config is a byte/mode/mtime-preserving no-op; invalid existing config is an error. Hooks never write config and use in-memory defaults only for truly missing automatic config after historical recovery checks. Explicit missing E, corrupt/unreadable canonical files and unresolved recovery artifacts are errors, with no bundle/default fallback.
 
-Use the [settings recipe](../commands/settings.md) for `config edit --stdin --expect-revision TOKEN`: private input, only requested JSON Pointer leaf edits, raw values, and an explicit user decision after any conflict. A volume plus one status sound edit preserves every other raw field, status, channel, webhook secret/payload and future-agent setting. Inspect is a safe projection, not a replacement document; absent free-form values are not unset.
-
-Before any updater deletes/refreshes cache, personalized or unknown historical cache-only/custom-root settings require explicit import using a verified new helper: stop old writers, inspect the selected destination, then `config init --from FILE` only if that destination is missing. Never auto-copy a bundle, guess the newest cache, overwrite existing canonical config, or treat this as migration/reset. If preflight/helper is unavailable, stop the update and retain the old runtime. For existing invalid config, stop writers and explicitly repair/recover it while preserving damaged bytes; init cannot reset it.
-
-Existing L with v1-shaped JSON remains readable by the old Go reader, which ignores additive unknown fields. The old wizard loses unknown fields and must not run concurrently with the current settings editor. Update all installed runtimes before selecting N/E paths; keep one canonical configuration file shared by those runtimes.
-
 For support, share only `config inspect --json`, never `cat` of config; keep saved diagnostics private and review paths before posting. The response includes selection (path/source/exists/diagnostics), revision, schemaVersion, valid, optional errorCode, and safe settings: desktopEnabled, desktopSound, volume and known-status enabled/desktopEnabled/webhookEnabled. It omits free-form sounds, webhook secrets/payloads and unknown fields.
-
-On Windows, `ConfigPublicReadable` is a warning about read grants on the selected
-configuration file, not a check of `%APPDATA%` or the entire profile. It does not
-by itself reject a hook read. `ConfigPermissionDenied` can instead come from an
-OS access denial, the config/lock ACL, or a writable ancestor. `config init`
-and failed `config inspect` now print an ACL rejection's actual object path,
-reason, and trustee SID (or owner SID for an owner rejection). `config init
---json` and failed `config inspect --json` include optional `permissionFailure`
-with `objectPath`, `reason`, and available `trusteeSid`, `ownerSid`, `accessMask`.
-The mask contains the rejected rights, not the whole grant. OS denial cannot
-identify an account and omits SID/mask. Account names are not resolved; match the
-SID against `Get-Acl`/`icacls` locally, including unresolved SIDs. Parser/flag
-errors remain content-free, and hooks retain their existing output behavior.
-A genuinely absent config still inspects as defaults; inspect does not test
-whether initialization could write it. Managed reads and
-writes inspect each directory component below the volume root, reject reparse
-points and unrelated write/delete/ACL-change grants, and pin directories against
-replacement. Initialization of a profile target also checks `%USERPROFILE%` to coordinate the
-`.agent-notifications-config.lock` selection guard. The automatic ProgramData
-target uses a private selection guard beside its config instead. An unrelated read/execute
-grant on an ancestor (including `CodexSandboxUsers:(RX)`) is allowed. `OWNER
-RIGHTS` grants apply to the actual object owner; they are allowed when that owner
-is trusted. New config and lock files grant access only to the current user and
-SYSTEM; existing ACLs are never repaired automatically.
-
-Inspect permissions with PowerShell `Get-Acl -LiteralPath <path>` or
-`icacls <path>` for the selected file, its `.lock` sibling, containing directories,
-and the profile guard. Repair only the object carrying the unexpected grant;
-do not remove read access from all of `%APPDATA%` or the profile. Keep the current
-user and SYSTEM access, and preserve existing config contents. After repair,
-run `config init` and `config inspect --json`. To inspect managed setup after
-`installation needs inspection`, run `setup-notifications status --json`
-(optionally `--control-root <absolute managed control directory>`).
-`--provider claude` belongs to configure/register operations, not status.
-
-### Windows sandbox profile with write/delete grants
-
-If `%USERPROFILE%` grants an unrelated principal `(M,DC)` (Modify and
-DeleteChild), automatic initialization and managed reads can return
-`ConfigPermissionDenied` even after the config directory is private. A parent
-DeleteChild grant permits replacing its immediate children; disabling inheritance
-only on the config directory does not secure the whole path. Do not exempt
-`CodexSandboxUsers` or remove sandbox-required grants from the entire profile.
-
-For a new installation with no legacy or APPDATA config, the current Windows
-runtime automatically selects a private SID-specific directory in the native
-ProgramData folder when the profile/creation ancestry fails ACL checks. A supplied
-`PROGRAMDATA` must be an absolute path; custom roots retain strict ancestor
-checks. The special handling of system add-only rights applies only to the
-actual native KnownFolder and its volume root. Run
-`config init` normally; no elevation, override or manual move is needed on a
-standard Windows installation. CLI and hooks running as that Windows user select
-the same file. Once created, it remains selected if the profile ACL is later
-repaired. Its directory, config and lock must remain private; hostile precreated
-entries, reparse points or unsafe ProgramData permissions cause a clear error,
-without permission rewriting or a random alternative directory.
-
-The v1.49.2 wizard/configure path could create this fallback using inherited
-Windows ACLs instead of the protected store. Such a directory/file remains
-rejected as unsafe; updating does not silently repair or trust its contents.
-Stop writers and retain the existing file as untrusted recovery evidence. Review
-its settings before importing into a newly provisioned private directory using
-the explicit recovery procedure below. Replace webhook credentials if they were
-stored in a file exposed to other local users. Fresh setup must create protected
-explicit ACLs before publishing configuration bytes, just like `config init`.
-
-Existing legacy/APPDATA config, including malformed or inaccessible entries and
-recovery artifacts, retains priority before a private ProgramData store is
-established. If a profile config appears alongside that established store,
-automatic selection fails with `ConfigConflict`; choose the intended file with
-`AGENT_NOTIFICATIONS_CONFIG`. This prevents an untrusted profile writer from
-redirecting hooks to newly planted settings. Both files remain untouched. The runtime never hides it by creating a
-fresh default or automatically imports potentially unsafe settings. If such an
-existing config is below writable ancestry, or when using an older runtime,
-use an explicit configuration outside that ancestry. An explicit path still
-checks its own directories and private target lock; it can skip an unavailable
-profile selection guard. Another path under `%USERPROFILE%`, including
-`%LOCALAPPDATA%`, does not solve this case.
-
-For example, an administrator can create a **new**, user-specific directory at
-the system drive root. Run this PowerShell provision step as the affected user
-with elevation (not as a different administrator account). It refuses an
-existing directory and changes no profile or ancestor ACL:
-
-```powershell
-$ErrorActionPreference = 'Stop'
-$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-$dir = Join-Path ($env:SystemDrive + '\') ("agent-notifications-" + $sid)
-if (Test-Path -LiteralPath $dir) { throw "Directory already exists: $dir" }
-New-Item -ItemType Directory -Path $dir | Out-Null
-$acl = New-Object System.Security.AccessControl.DirectorySecurity
-$acl.SetSecurityDescriptorSddlForm("O:${sid}D:P(A;OICI;FA;;;${sid})(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")
-Set-Acl -LiteralPath $dir -AclObject $acl
-```
-
-Back in the affected user's ordinary shell, set the explicit **file** path:
-
-```powershell
-$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-$dir = Join-Path ($env:SystemDrive + '\') ("agent-notifications-" + $sid)
-$env:AGENT_NOTIFICATIONS_CONFIG = Join-Path $dir 'config.json'
-```
-
-Using the recorded installed executable, run `config path --json`, then
-`config init` and `config inspect --json`. If preserving an existing personalized
-config, stop its writers and use `config init --from <verified source file>`
-instead of initializing defaults; retain the original file. If the source has a
-managed `.lock` under the writable profile, importing directly still checks that
-unsafe ancestry. In that case, explicitly make a byte-preserving copy into the
-new private directory under a different filename, verify its SHA-256 against the
-original, and import that copy (without a source `.lock`). Do not use inspect
-output as the source document. Initialization is create-only. Stop if initialization reports another permission error and inspect
-that target's complete ACL chain; do not weaken its checks.
-
-Every agent and hook must inherit the same override. To persist it for this
-Windows user, after successful initialization:
-
-```powershell
-[Environment]::SetEnvironmentVariable('AGENT_NOTIFICATIONS_CONFIG', $env:AGENT_NOTIFICATIONS_CONFIG, 'User')
-```
-
-Restart Windows Terminal and agent applications so they inherit the variable,
-then confirm the same selected path in their hook context. Leave `%USERPROFILE%`
-and `%APPDATA%` pointing to their real locations. This storage workaround is
-supported by v1.49.1 and does not depend on the separate OWNER RIGHTS fix.
 
 The following JSON illustrates the schema. Do not replace your existing document with it; apply only explicitly requested leaf edits:
 
@@ -305,9 +168,9 @@ hides native and generated names without hiding the question or project.
 | `respectJudgeMode` | `true` | Honor `CLAUDE_HOOK_JUDGE_MODE=true` env var to suppress notifications |
 | `notifyOnlyWhenUnfocused` | `false` | Skip the desktop notification only when the focused terminal window can be matched to the current Claude session. Best-effort per platform; if focus can't be determined the notification is still shown. |
 | `notifyDelaySeconds` | `0` | Wait N seconds before delivering a desktop notification (capped at 25s by the hook timeout). With `notifyOnlyWhenUnfocused`, focus is re-checked after the wait. Webhooks are unaffected. |
-| `respectDoNotDisturb` | `"off"` | Honour the desktop's Do Not Disturb state. `"silent"` still delivers the banner (so it reaches the notification centre) but skips the plugin's sound; `"suppress"` skips the notification entirely. Linux only for now (KDE Plasma, GNOME, XFCE, dunst); other platforms always report "not in DND". Webhooks are unaffected. See [Do Not Disturb](DO_NOT_DISTURB.md). |
-| `respectDisplaySleep` | `false` | Skip the plugin's own sound while every display is asleep; the banner is still delivered. macOS only for now; other platforms always report "not asleep". Independent of `respectDoNotDisturb`. Webhooks are unaffected. |
-| `replaceNotificationsPerSession` | `false` | macOS only. Let a session's newest desktop notification **replace** its previous banner in place instead of stacking a new one. Different sessions never collide. Default `false` keeps every banner so unread alerts are never silently dropped. |
+| `respectDoNotDisturb` | `"off"` | Honour the desktop's Do Not Disturb state. `"silent"` still delivers the banner (so it reaches the notification centre) but skips the plugin's sound; `"suppress"` skips the notification entirely. macOS Focus modes are not detected yet, so `respectDoNotDisturb` has no effect on macOS. Webhooks are unaffected. See [Do Not Disturb](DO_NOT_DISTURB.md). |
+| `respectDisplaySleep` | `false` | Skip the plugin's own sound while every display is asleep; the banner is still delivered. macOS only; other platforms always report "not asleep". Independent of `respectDoNotDisturb`. Webhooks are unaffected. |
+| `replaceNotificationsPerSession` | `false` | Let a session's newest desktop notification **replace** its previous banner in place instead of stacking a new one. Different sessions never collide. Default `false` keeps every banner so unread alerts are never silently dropped. |
 | `suppressQuestionAfterTaskCompleteSeconds` | `12` | Suppress question notifications for N seconds after task complete |
 | `suppressQuestionAfterAnyNotificationSeconds` | `7` | Suppress question notifications for N seconds after any notification |
 | `suppressFilters` | `[]` | Array of rules to suppress notifications by status, git branch, and/or folder. Each rule is an AND of its fields; omitted fields match any value. Set `gitBranch` to `""` to match sessions outside git repos. |
@@ -337,7 +200,7 @@ other off for the same status.
 
 Two independent options cut notification noise when you're already watching the terminal:
 
-- **`notifyOnlyWhenUnfocused`** - skip the desktop notification only when the focused terminal window can be matched to the current Claude session. On Linux this works on X11 terminals that export `$WINDOWID`, and in [JetBrains IDE terminals](CLICK_TO_FOCUS.md#jetbrains-ides).
+- **`notifyOnlyWhenUnfocused`** - skip the desktop notification only when the focused terminal window can be matched to the current Claude session.
 - **`notifyDelaySeconds`** - wait N seconds before delivering, so a quick task can finish before any banner appears (capped at 25s to stay within the hook timeout).
 
 They compose: with both set, the plugin waits, then notifies only if the terminal still isn't focused - "tell me once I've looked away."
@@ -354,8 +217,6 @@ They compose: with both set, the plugin waits, then notifies only if the termina
 Both apply to **desktop notifications only** - webhook delivery is never delayed or suppressed. Focus detection is best-effort and degrades safely by notifying when unsure:
 
 - macOS: Ghostty can be matched by exact terminal/session metadata; other terminal apps require the frontmost window title to match the project folder and existing Screen Recording access.
-- Linux: X11 sessions compare `$WINDOWID` to the active window. In JetBrains IDE terminals the active window must belong to the IDE process and its title must name the project (KDE Plasma: `kdotool`, X11: `xdotool`); an inherited `$WINDOWID` is ignored there. Other Wayland sessions and terminals without `$WINDOWID` are treated as unknown.
-- Windows: the foreground window must belong to the hook process ancestry and its title must contain the project folder. Ambiguous multi-window or multi-tab terminal hosts are treated as unknown.
 
 Unknown means "show the notification", not "suppress it".
 
@@ -381,11 +242,7 @@ until you opt in:
 - **`"silent"`** - the banner is still delivered, so it lands in the notification centre and shows when DND lifts, but the plugin's sound is skipped.
 - **`"suppress"`** - nothing is delivered.
 
-Detection is Linux-only for now - KDE Plasma and other daemons exposing
-`org.freedesktop.Notifications.Inhibited`, dunst, XFCE and GNOME. macOS Focus
-modes and Windows Focus Assist are not detected yet, so `respectDoNotDisturb`
-has no effect there. Like focus detection, it fails open: anything it cannot read
-counts as "not in DND" and the notification is delivered with its sound.
+macOS Focus modes are not detected yet, so `respectDoNotDisturb` has no effect on macOS. Like focus detection, it fails open: anything it cannot read counts as "not in DND" and the notification is delivered with its sound.
 
 Webhooks are unaffected in every mode. See [Do Not Disturb](DO_NOT_DISTURB.md)
 for the exact sources per desktop, the latency budget, and how to verify which
@@ -409,12 +266,11 @@ It is `false` by default, so nothing changes until you opt in:
 }
 ```
 
-Detection is macOS-only for now, via the same public Quartz Display Services
+Detection is macOS-only, via the same public Quartz Display Services
 API used by other window-management tools, and considers every attached
 display: on a laptop in clamshell mode with an external monitor still on, the
 built-in display reports asleep while you are actively working, so the sound is
-muted only when no attached display is awake. Linux and Windows are not
-detected yet, so the option has no effect there. Detection fails open the same
+muted only when no attached display is awake. Detection fails open the same
 way Do Not Disturb detection does: anything it cannot read counts as "not
 asleep" and the notification keeps its sound.
 
@@ -451,8 +307,6 @@ On macOS `terminal-notifier -group` is the `UNNotificationRequest.identifier`: d
 
 **System sounds:**
 - macOS: `/System/Library/Sounds/Glass.aiff`, `/System/Library/Sounds/Hero.aiff`, etc.
-- Linux: `/usr/share/sounds/**/*.ogg` (varies by distribution)
-- Windows: Use built-in MP3s (system sounds not easily accessible)
 
 **Supported formats:** MP3, WAV, FLAC, OGG/Vorbis, AIFF
 
@@ -488,33 +342,6 @@ The macOS notification backend does not use `audioDevice`: UserNotifications
 has no per-notification output-device parameter. Choosing an alert output in
 System Settings affects other system alerts too. The plugin must not temporarily
 switch that global output to emulate a per-plugin selection.
-
-On Linux and Windows, `audioDevice` routes notification sounds to a specific
-audio output device instead of the system default:
-
-```bash
-# List available audio devices
-bin/list-devices
-
-# Output:
-#   0: MacBook Pro-Lautsprecher
-#   1: Babyface (23314790) (default)
-#   2: Immersed
-```
-
-Then add the device name to the shared file selected by `config path`:
-
-```json
-{
-  "notifications": {
-    "desktop": {
-      "audioDevice": "DEVICE_NAME"
-    }
-  }
-}
-```
-
-Leave `audioDevice` empty or omit it to use the system default device.
 
 ### Test Sound Playback
 

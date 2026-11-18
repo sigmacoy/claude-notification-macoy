@@ -16,8 +16,8 @@ notification_plugin_go/
 │   │   └── config.go              # Config loading, validation, defaults
 │   ├── logging/                   # Structured logging
 │   │   └── logging.go             # Logger implementation
-│   ├── platform/                  # Cross-platform utilities
-│   │   └── platform.go            # OS detection, temp dirs, file operations
+│   ├── platform/                  # macOS utilities
+│   │   └── platform.go            # Temp dirs, file operations
 │   ├── analyzer/                  # Status analysis
 │   │   └── analyzer.go            # JSONL parsing, state machine
 │   ├── state/                     # Session state management
@@ -25,7 +25,7 @@ notification_plugin_go/
 │   ├── dedup/                     # Deduplication
 │   │   └── dedup.go               # Two-phase lock mechanism
 │   ├── notifier/                  # Desktop notifications
-│   │   └── notifier.go            # Cross-platform notifications via beeep
+│   │   └── notifier.go            # macOS notifications via beeep
 │   ├── webhook/                   # Webhook integrations
 │   │   └── webhook.go             # Slack, Discord, Telegram, Custom
 │   ├── summary/                   # Message generation
@@ -56,20 +56,18 @@ The config Store owns selection and raw patch writes; see [OS paths and recovery
 
 ### 1. Platform Layer (`internal/platform`)
 
-**Purpose**: Abstract OS-specific operations for cross-platform compatibility.
+**Purpose**: macOS-specific operations.
 
 **Key Functions**:
 - `TempDir()` - Get temporary directory (removes trailing slash on macOS)
-- `FileMTime(path)` - Get file modification time (handles BSD/GNU stat differences)
+- `FileMTime(path)` - Get file modification time (BSD stat format: `-f %m`)
 - `AtomicCreateFile(path)` - Atomically create file with O_EXCL
 - `FileAge(path)` - Calculate file age in seconds
 - `CleanupOldFiles(dir, pattern, maxAge)` - Remove stale files
 
-**Cross-Platform Considerations**:
-- macOS: `$TMPDIR` has trailing slash → stripped
-- Linux: GNU stat format (`-c %Y`)
-- macOS: BSD stat format (`-f %m`)
-- Windows: Git Bash/WSL compatibility
+**macOS Implementation**:
+- `$TMPDIR` has trailing slash → stripped
+- BSD stat format (`-f %m`) for file modification time
 
 ### 2. Config Layer (`internal/config`)
 
@@ -176,12 +174,11 @@ ELSE:
 
 ### 7. Notifier (`internal/notifier`)
 
-**Purpose**: Send cross-platform desktop notifications.
+**Purpose**: Send macOS desktop notifications.
 
 **Implementation**:
-- Uses `github.com/gen2brain/beeep` for notifications
-- Supports macOS, Linux, Windows
-- Custom sound playback uses `malgo` (miniaudio) cross-platform
+- Uses `github.com/gen2brain/beeep` for notifications (macOS via `osascript`)
+- Custom sound playback uses `malgo` (miniaudio)
 - Audio formats are decoded in-process via `gopxl/beep` (MP3, WAV, FLAC, OGG/Vorbis) and `go-audio/aiff` (AIFF)
 
 ### 8. Webhook Sender (`internal/webhook`)
@@ -373,14 +370,14 @@ ELSE:
 
 ### 3. Why beeep Library?
 
-**Problem**: Platform-specific notification APIs are complex.
+**Problem**: macOS notification APIs (osascript) are complex.
 
-**Solution**: Use `github.com/gen2brain/beeep` for unified API.
+**Solution**: Use `github.com/gen2brain/beeep` for unified macOS API via osascript.
 
 **Benefits**:
-- Single API for macOS, Linux, Windows
+- Single API for macOS notifications
 - Well-maintained, popular library
-- Handles platform quirks automatically
+- Handles macOS notification quirks automatically
 
 ### 4. Why Separate State Files?
 
@@ -407,9 +404,9 @@ ELSE:
 - Mock stdin/stdout
 - Fixture-based transcript analysis
 
-### Cross-Platform Tests
-- CI matrix: macOS, Linux, Windows
-- Platform-specific code paths
+### macOS Tests
+- CI runs on macOS
+- macOS-specific code paths
 
 ## Performance Considerations
 

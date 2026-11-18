@@ -16,7 +16,7 @@ The Claude triggers are listed below. Codex uses a different event mapping, desc
 
 ## Gemini CLI
 
-Available for macOS amd64/arm64, Linux amd64/arm64 and Windows amd64 through the
+Available for macOS amd64/arm64 through the
 [platform channels](PLATFORM_RELEASE_CHANNELS.md).
 The installer does not restrict Gemini CLI versions. [Setup, qualification and limits](gemini-notifications.md).
 

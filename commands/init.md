@@ -37,8 +37,7 @@ Then run `/claude-notifications-go:settings` for [private revision-checked edits
 After a successful plugin install, agent-notify setup runs by default.
 When the installed CLI supports portable `setup-notifications wizard`, that is
 the setup path (`--hooks false --agent-notify true`). The wizard downloads
-the verified portable ZIP for the installed binary's release; Linux first configures
-the supported `navigation=none` policy. Pass
+the verified portable ZIP for the installed binary's release. Pass
 `--skip-agent-notify` to keep hooks-only setup. If the advertised setup
 command runs and fails, this slash command returns incomplete/nonzero with
 a retry; committed plugin/hooks files stay in place. A missing binary, a CLI
@@ -128,11 +127,10 @@ if ! chmod +x "$INSTALLER" || ! "$INSTALLER"; then
   exit 1
 fi
 if [ "$SKIP_AGENT_NOTIFY" != true ]; then
-  case "$(uname -s 2>/dev/null)" in
-    MINGW*|MSYS*|CYGWIN*) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications.bat"; NOTIFY_READY=(-f "$NOTIFY_BIN"); USE_WIZARD=true ;;
-    Darwin|Linux) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications"; NOTIFY_READY=(-x "$NOTIFY_BIN"); USE_WIZARD=true ;;
-    *) NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications"; NOTIFY_READY=(-x "$NOTIFY_BIN"); USE_WIZARD=false ;;
-  esac
+  # macOS only
+  NOTIFY_BIN="${CLAUDE_PLUGIN_ROOT}/bin/claude-notifications"
+  NOTIFY_READY=(-x "$NOTIFY_BIN")
+  USE_WIZARD=true
   if ! test "${NOTIFY_READY[@]}"; then
     echo "agent-notify setup skipped; installer binary not found. Plugin install succeeded." >&2
     [ "$SEEN_AGENT_NOTIFY" != true ] || exit 1
@@ -143,25 +141,18 @@ if [ "$SKIP_AGENT_NOTIFY" != true ]; then
       [ "$SEEN_AGENT_NOTIFY" != true ] || exit 1
       exit 0
     fi
-    case "$(uname -s 2>/dev/null)" in
-      Darwin|Linux|MINGW*|MSYS*|CYGWIN*)
-        if ! "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled; then
-          printf 'agent-notify configure failed; plugin install files remain. Retry: %s\n' "$(quote_shell_command "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled)" >&2
-          exit 1
-        fi
-        ;;
-    esac
+    if ! "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled; then
+      printf 'agent-notify configure failed; plugin install files remain. Retry: %s\n' "$(quote_shell_command "$NOTIFY_BIN" setup-notifications configure --provider claude "${CONFIGURE_ARGS[@]}" --policy-only --preserve-enabled)" >&2
+      exit 1
+    fi
     wizard=(setup-notifications wizard --action install --install-or-update --agents claude --hooks false --agent-notify true --yes --plugin-root "${CLAUDE_PLUGIN_ROOT}")
     [ "$SEEN_AGENT_NOTIFY" = true ] || wizard+=(--preserve-existing-units)
-    case "$(uname -s 2>/dev/null)" in
-      MINGW*|MSYS*|CYGWIN*) ;; # The native helper is the installed primary, not this BAT shell launcher.
-      *) wizard+=(--helper "$NOTIFY_BIN") ;;
-    esac
+    wizard+=(--helper "$NOTIFY_BIN")
     if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
       wizard+=(--claude-config "$CLAUDE_CONFIG_DIR")
       claude_home="$CLAUDE_CONFIG_DIR"
     else
-      claude_home="${HOME:-${USERPROFILE:-}}"
+      claude_home="${HOME:-}"
       if [ -n "$claude_home" ]; then
         wizard+=(--claude-config "$claude_home/.claude")
       fi
@@ -171,11 +162,10 @@ if [ "$SKIP_AGENT_NOTIFY" != true ]; then
     fi
     claude_exec=$(command -v claude 2>/dev/null || true)
     case "$claude_exec" in
-      /*|[A-Za-z]:/*|[A-Za-z]:\\*) wizard+=(--claude-executable "$claude_exec" --client-executable "$claude_exec") ;;
+      /*) wizard+=(--claude-executable "$claude_exec" --client-executable "$claude_exec") ;;
     esac
     if ! "$NOTIFY_BIN" "${wizard[@]}"; then
       echo "agent-notify setup failed; plugin install files remain. Use the wizard's retry or next resume command above; if absent, rerun /init with the same installed release." >&2
-      case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) echo "On Windows, run that command in PowerShell (the printed quoting is PowerShell syntax)." >&2 ;; esac
       exit 1
     fi
   else

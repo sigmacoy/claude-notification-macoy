@@ -128,22 +128,20 @@ Use that executable for lifecycle commands (retain `--config-root` and
 Reload Qoder after installation, update or removal so existing sessions pick up
 the changed hooks. Click-to-focus to the exact existing Qoder chat is unavailable.
 
-## Build a standalone native package
+## Build a standalone native package (macOS)
 
-Build the notifications executable for the machine that will run Qoder, then
-package those exact bytes. For example, on Linux amd64:
+Build the notifications executable for macOS, then package those exact bytes.
 
 ```sh
 GOWORK=off go build -o /absolute/TEST-qoder/claude-notifications ./cmd/claude-notifications
 GOWORK=off go run ./cmd/build-qoder-package \
-  -version 1.49.5 -os linux -arch amd64 \
+  -version 1.49.5 -os darwin -arch arm64 \
   -executable /absolute/TEST-qoder/claude-notifications \
   -workdir /absolute/TEST-qoder/package \
-  -output /absolute/TEST-qoder/agent-notify-qoder-linux-amd64.zip
+  -output /absolute/TEST-qoder/agent-notify-qoder-darwin-arm64.zip
 ```
 
-Use `darwin` or `windows` and the correct `amd64`/`arm64` for other hosts. Windows
-packages contain `bin/claude-notifications.exe`. This command does not cross-build
+For Intel Macs, use `-arch amd64` instead. This command does not cross-build
 the executable. Output roots and archives must be new paths. The default version
 comes from the same `config.ConsumerVersion` as the existing portable builder.
 
@@ -151,8 +149,8 @@ The expanded package includes both a standard identity `plugin.json` and native
 `.qoder-plugin/plugin.json`, plus `hooks/hooks.json`. The package identity is
 `agent-notifications-qoder`; each hook names itself
 `agent-notifications-qoder-<lowercased event>` and runs
-`${QODER_PLUGIN_ROOT}/bin/claude-notifications` (with `.exe` on Windows).
-Native arguments are separate fields, allowing package roots with spaces.
+`${QODER_PLUGIN_ROOT}/bin/claude-notifications`. Native arguments are separate
+fields, allowing package roots with spaces.
 
 Install the expanded package with Qoder's native plugin installer:
 

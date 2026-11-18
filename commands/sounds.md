@@ -42,27 +42,14 @@ else
 
   echo ""
 
-  # System sounds
-  case "$(uname -s)" in
-    Darwin)
-      if [ -d "/System/Library/Sounds" ]; then
-        echo "System sounds (macOS):"
-        echo ""
-        ls -1 /System/Library/Sounds/*.aiff 2>/dev/null | while read file; do
-          echo "  $(basename "$file" .aiff)"
-        done
-      fi
-      ;;
-    Linux)
-      if [ -d "/usr/share/sounds" ]; then
-        echo "System sounds (Linux):"
-        echo ""
-        find /usr/share/sounds -type f \( -name "*.ogg" -o -name "*.wav" \) 2>/dev/null | head -20 | while read file; do
-          echo "  $(basename "$file")"
-        done
-      fi
-      ;;
-  esac
+  # System sounds (macOS only)
+  if [ -d "/System/Library/Sounds" ]; then
+    echo "System sounds (macOS):"
+    echo ""
+    ls -1 /System/Library/Sounds/*.aiff 2>/dev/null | while read file; do
+      echo "  $(basename "$file" .aiff)"
+    done
+  fi
 fi
 ```
 

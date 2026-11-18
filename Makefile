@@ -8,9 +8,11 @@
 BINARY=claude-notifications
 SOUND_PREVIEW=sound-preview
 LIST_SOUNDS=list-sounds
+PLAY_NOTIFICATION=play-notification
 BINARY_PATH=bin/$(BINARY)
 SOUND_PREVIEW_PATH=bin/$(SOUND_PREVIEW)
 LIST_SOUNDS_PATH=bin/$(LIST_SOUNDS)
+PLAY_NOTIFICATION_PATH=bin/$(PLAY_NOTIFICATION)
 
 # Build flags
 # Development build: includes debug symbols for debugging
@@ -19,10 +21,11 @@ RELEASE_FLAGS=-ldflags="-s -w" -trimpath
 
 # Build targets
 build: ## Build the binaries (development mode with debug symbols)
-	@echo "Building $(BINARY), $(SOUND_PREVIEW) and $(LIST_SOUNDS) (development mode)..."
+	@echo "Building $(BINARY), $(SOUND_PREVIEW), $(LIST_SOUNDS) and $(PLAY_NOTIFICATION) (development mode)..."
 	@go build -o $(BINARY_PATH) ./cmd/claude-notifications
 	@go build -o $(SOUND_PREVIEW_PATH) ./cmd/sound-preview
 	@go build -o $(LIST_SOUNDS_PATH) ./cmd/list-sounds
+	@go build -o $(PLAY_NOTIFICATION_PATH) ./cmd/play-notification
 	@echo "Build complete! Binaries in bin/"
 
 build-all: ## Build optimized binaries for all platforms
@@ -48,6 +51,12 @@ build-all: ## Build optimized binaries for all platforms
 	@GOOS=linux GOARCH=amd64 go build $(RELEASE_FLAGS) -o dist/$(LIST_SOUNDS)-linux-amd64 ./cmd/list-sounds
 	@GOOS=linux GOARCH=arm64 go build $(RELEASE_FLAGS) -o dist/$(LIST_SOUNDS)-linux-arm64 ./cmd/list-sounds
 	@GOOS=windows GOARCH=amd64 go build $(RELEASE_FLAGS) -o dist/$(LIST_SOUNDS)-windows-amd64.exe ./cmd/list-sounds
+	@echo "Building play-notification..."
+	@GOOS=darwin GOARCH=amd64 go build $(RELEASE_FLAGS) -o dist/$(PLAY_NOTIFICATION)-darwin-amd64 ./cmd/play-notification
+	@GOOS=darwin GOARCH=arm64 go build $(RELEASE_FLAGS) -o dist/$(PLAY_NOTIFICATION)-darwin-arm64 ./cmd/play-notification
+	@GOOS=linux GOARCH=amd64 go build $(RELEASE_FLAGS) -o dist/$(PLAY_NOTIFICATION)-linux-amd64 ./cmd/play-notification
+	@GOOS=linux GOARCH=arm64 go build $(RELEASE_FLAGS) -o dist/$(PLAY_NOTIFICATION)-linux-arm64 ./cmd/play-notification
+	@GOOS=windows GOARCH=amd64 go build $(RELEASE_FLAGS) -o dist/$(PLAY_NOTIFICATION)-windows-amd64.exe ./cmd/play-notification
 	@echo "Build complete! Optimized binaries in dist/"
 
 # Test targets
@@ -184,8 +193,9 @@ rebuild-and-commit: build-all ## Rebuild optimized binaries and prepare for comm
 	@echo ""
 	@echo "Platform binaries updated:"
 	@ls -1 bin/claude-notifications-* 2>/dev/null || echo "  (none found)"
+	@ls -1 bin/play-notification-* 2>/dev/null || echo "  (none found)"
 	@echo ""
-	@echo "To commit: git add bin/claude-notifications-* && git commit -m 'chore: rebuild binaries'"
+	@echo "To commit: git add bin/claude-notifications-* bin/play-notification-* && git commit -m 'chore: rebuild binaries'"
 
 # Swift notifier (macOS only)
 build-notifier: ## Build ClaudeNotifier .app bundle (macOS)

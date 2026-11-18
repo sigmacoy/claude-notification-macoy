@@ -9,18 +9,16 @@ Explicitly enabled webhooks also work in print, JSON, RPC and remote sessions.
 ## Qualification
 
 Release acceptance covers real Pi hooks and installed update/repair/remove/reload
-checks on all three OSes, with native desktop cases on Linux. The owner also
+checks on macOS, with native desktop cases. The owner also
 manually confirmed a completion banner and click back to the Pi Terminal window
-on macOS. Full macOS/Windows desktop sound and negative-case qualification is
+on macOS. Full macOS desktop sound and negative-case qualification is
 pending; see the [test scope and retained limitations](testing/pi-native-e2e.md#owner-approved-hooklifecycle-release-profile-2026-11-01).
 
 ## Install or update
 
 Install the [official standalone Pi distribution](https://github.com/earendil-works/pi#getting-started)
 first and make `pi` available on `PATH`. The native integration is tested against
-Pi v1.4.0. On Windows, use its real `pi.exe`; an npm `pi.cmd` shim is refused with
-standalone installation guidance. Run the common installer from Bash, or native
-Git Bash on Windows:
+Pi v1.4.0. Run the common installer from Bash:
 
 ```bash
 (set -o pipefail; curl -fsSL https://agent-notifications.com/install.sh | bash -s -- --product pi --desktop)
@@ -121,14 +119,11 @@ Use the installer's channel-change command to change that choice.
 Keep Pi running in the terminal from which the task started. A notification click
 uses the shared platform targeting path captured from that live Pi session.
 Window, tab and pane precision depends on the terminal and multiplexer; see the
-[terminal support table and permissions](CLICK_TO_FOCUS.md). A Windows Terminal
-window is a window target, not a promise to select a particular tab.
+[terminal support table and permissions](CLICK_TO_FOCUS.md).
 
 macOS uses the managed signed notification helper and requires notification
 permission. Exact window targeting can also need the documented Accessibility
-and screen permissions. Linux requires a running desktop notification service
-and the focus tools appropriate for its compositor. Windows requires an active
-interactive desktop with notifications enabled. Muting sounds, Focus/Do Not
+and screen permissions. Muting sounds, Focus/Do Not
 Disturb or a locked/unavailable desktop can change visible or audible delivery.
 
 ## Profile, inspection and removal

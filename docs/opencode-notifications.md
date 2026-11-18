@@ -1,14 +1,12 @@
-# OpenCode notifications
+# OpenCode notifications (macOS)
 
 Agent Notifications adds a global OpenCode plugin for **root-session completion,
 questions, permission requests and terminal errors**. Desktop completion uses
 `✅ [Native session title]` when available, and questions show their actual text
-as `❓ Actual question?` with the session title as context. macOS uses a native
-subtitle; Linux and Windows include that context above the body. Missing context
-falls back to generic OpenCode copy. Alerts remain silent by default;
-the **unreleased source** offers an explicit opt-in to request the OS's
-built-in notification sound where supported. The published v1.49.11 platform
-channels remain silent. This is not the Claude/Codex custom-sound/volume
+as `❓ Actual question?` with the session title as context via macOS native subtitle.
+Alerts remain silent by default; the **unreleased source** offers an explicit opt-in
+to request the OS's built-in notification sound where supported. The published v1.49.11
+platform channels remain silent. This is not the Claude/Codex custom-sound/volume
 engine. Clicking does not navigate to a terminal or OpenCode session, and
 plan/review events are outside this integration.
 
@@ -27,60 +25,27 @@ rebuild of the embedded bundle. The SDK is separately unpublished; publishing it
 or installing it from the registry is not a gate for this consumer release.
 Existing installations must run update and restart OpenCode to load the new bundle.
 
-## Platforms and observed delivery
+## macOS delivery
 
-See the [platform channels](PLATFORM_RELEASE_CHANNELS.md) for current versions on
-macOS arm64/amd64, Linux arm64/amd64 and Windows amd64, and the
+Desktop delivery uses the signed macOS helper (`ClaudeNotifier.app`). See the
+[platform channels](PLATFORM_RELEASE_CHANNELS.md) for current versions on
+macOS arm64/amd64, and the
 [release notes](https://github.com/777genius/agent-notifications/releases) for exact
-validation scope and retained failures. The current 1.48.6 release uses basic
-five-platform artifact checks and separate macOS E2E; the eleven-cell OpenCode
-installed-business suite was not run. Full native E2E, source-epoch/time-policy,
-cold-start and visible OpenCode desktop qualification are not established by
-those checks. Older observations below do not qualify new release bytes.
-For native Windows shell installation use **Git Bash**, not WSL or PowerShell.
-Desktop delivery uses the signed macOS helper, the Linux desktop notification
-service or Windows toasts. Linux needs an available desktop session/D-Bus service.
+validation scope and retained failures.
 
 - Historical macOS arm64 evidence includes a user-confirmed visible completion banner.
-- Historical Linux amd64 X11/dunst evidence rendered all four real OpenCode events;
-  see the [captured banners](evidence/opencode-1.18.33-x11-notifications.png).
-- Historical V1 lifecycle/webhook checks covered all five targets; retained V2
-  native completion observations provide corroboration. They do not qualify new
-  release bytes by themselves.
-- The historical 1.48.1 release gate covered seven native Linux/Windows cells and three
-  artifact canaries, as detailed below. Exact release reports establish which checks
-  passed; configured workflow lanes alone are not evidence.
 - Historical macOS 1.48.3 evidence has four installed basic-business/lifecycle checks: V1 1.18.33
   and V2 2.0.21 with Apple Silicon binaries run natively and Intel binaries run
   under Rosetta. Physical Intel execution, full native E2E and visible OpenCode
   banners were not proved for that release. Historical desktop observations do
   not extend that scope.
 
-**Windows V1 limitation:** stock OpenCode V1 events do not always allow the
-original event age to be verified independently. A delayed completion can notify
-once, and the same completion can notify again after its 24-hour deduplication
-claim expires. Root-session and workspace filters, origin-bound provenance,
-deduplication within that claim lifetime, and lookup and IPC limits still apply.
-This accepted limitation does not qualify every Windows V1 version.
-
-<a id="dual-candidate-evidence-boundary"></a>
-
 ## Release qualification boundary
 
-The installed fixture in `scripts/opencode-native-e2e.py` retains eleven custody
-cells: V1 1.18.33 and V2 2.0.21 on all five platform pairs, plus Linux amd64 V1
-1.18.34. Historical Linux/Windows 1.48.1 release checks covered seven native cells: both API
-versions on Linux amd64/arm64 and Windows amd64, plus Linux amd64 V1 1.18.34.
-Artifact canaries cover the three Linux/Windows native targets.
-
-Historical macOS 1.48.3 separately checked four installed basic-business/lifecycle cells,
-using V1 1.18.33 and V2 2.0.21 on native Apple Silicon and Intel binaries under
+The installed fixture in `scripts/opencode-native-e2e.py` retains custody cells
+for macOS: V1 1.18.33 and V2 2.0.21 on native Apple Silicon and Intel binaries under
 Rosetta. That scope does not prove execution on physical Intel hardware, full
-native E2E or visible OpenCode banners. Custody of eleven cells is not evidence
-that all eleven passed the same business suite. These checks cover managed
-lifecycle, completion delivery and revocation; they do not replace the broader
-semantic matrix. See the exact-source reports linked from each platform release
-and the [release procedure](RELEASE.md).
+native E2E or visible OpenCode banners.
 
 Exact bundle/SDK/image custody, authoritative managed configuration, production
 parent/profile and compiled clock qualification precede delivery cases. Missing
@@ -99,7 +64,7 @@ select **OpenCode**. The guided command enables desktop notifications; webhook d
 
 Channel flags grant consent only for OpenCode; webhook URLs still need separate configuration. Claude/Codex setup runs first. If a later setup fails, earlier successful installations remain installed; fix the error and rerun the command.
 The bootstrap requires Agent Notifications **v1.46.0 or newer** and acquires the
-checksum-verified executable for your platform from the accepted release. On Mac,
+checksum-verified executable for macOS from the accepted release. On Mac,
 desktop setup also acquires the signed native helper and its attestation sidecar
 from the same release. The loader pins installer source to the release's exact
 commit.
@@ -122,9 +87,7 @@ after installation or update** to load the current global plugin bytes.
 ## Installed locations and manual setup
 
 The managed control directory is `~/Library/Application Support/agent-notifications`
-on macOS, `$XDG_CONFIG_HOME/agent-notifications` (otherwise
-`~/.config/agent-notifications`) on Linux, and `%APPDATA%\agent-notifications` on
-Windows. A fresh public install puts the runtime under its `runtime` directory;
+on macOS. A fresh public install puts the runtime under its `runtime` directory;
 an existing shared component keeps its recorded runtime location. Check
 `ownership.json` in the control directory for the actual runtime; do not publish
 this file unredacted.
@@ -134,18 +97,10 @@ otherwise `$XDG_CONFIG_HOME/opencode/plugins/agent-notifications.js`, otherwise
 `~/.config/opencode/plugins/agent-notifications.js`. Use the same environment when
 setting up and starting OpenCode. The CLI also supports `--opencode-config-dir`,
 `--xdg-config-home`, `--home`, `--control-root` and `--runtime-root` for explicit
-placement. On Windows, OpenCode placement paths must be clean native absolute
-paths with backslashes, without `..` or a trailing separator. In Git Bash use
-`cygpath -w` and quote the result, especially for `OPENCODE_CONFIG_DIR`,
-`XDG_CONFIG_HOME`, `--opencode-config-dir` and `--home`; `cygpath -m` emits forward
-slashes and does not satisfy this strict placement contract. For example:
+placement.
 
-```bash
-export OPENCODE_CONFIG_DIR="$(cygpath -w /absolute/path/to/opencode-profile)"
-```
-
-For manual/offline setup, obtain the native `claude-notifications-OS-ARCH` release
-binary (`.exe` on Windows) and verify it against that release's `checksums.txt`.
+For manual/offline setup, obtain the native `claude-notifications-macos-ARCH` release
+binary and verify it against that release's `checksums.txt`.
 The executable embeds the plugin; no npm installation or project dependency is
 required. Below, `NOTIFICATIONS_BIN` means that verified binary or the executable
 in your managed runtime:
@@ -176,7 +131,7 @@ Use the executable from the managed runtime to select OpenCode explicitly:
 This selects `agent-notifications.json` in the managed control directory, the
 same file the installed event consumer reads. Selection verifies the existing
 ownership ledger, platform command, origin-bound plugin and its control-root
-binding. The default control location follows the platform paths above. If setup
+binding. The default control location is `~/Library/Application Support/agent-notifications`. If setup
 used `--control-root`, pass that same existing directory to **every** config
 command, for example `config inspect --target opencode --control-root
 /absolute/path/to/control --json`. A control root is accepted only with matching
@@ -222,8 +177,7 @@ printf '%s\n' '{"set":{"/notifications/desktop/systemSound":true}}' |
 
 The existing `notifications.desktop.sound` master switch must also be
 enabled; `systemSound` starts as absent/off. Set it to `false` to opt out
-without disabling banners. The native macOS notification helper, Windows toast
-and Linux notification daemon decide whether an audible default cue is actually
+without disabling banners. The native macOS notification helper decides whether an audible default cue is actually
 played; OS Do Not Disturb and notification permissions may silence it. This
 setting does **not** enable custom sound files, volume/device selection or
 Click-to-Focus, and success from the OS notification API does not prove audible
@@ -279,24 +233,7 @@ verified local executable source. Choose the channels on every update:
 "$NOTIFICATIONS_BIN" setup-opencode update --binary /absolute/path/to/verified-native-binary --webhook
 ```
 
-On macOS/Linux, use `"$NOTIFICATIONS_BIN" setup-opencode remove`. On Windows,
-use the installer's printed **Remove** command: it runs a temporary copy because
-a running managed `.exe` cannot delete itself. The equivalent Git Bash command
-is below; set `NOTIFICATIONS_BIN` to the installed executable:
-
-```bash
-(
-  set -eu
-  stage=$(mktemp -d "${TMPDIR:-/tmp}/agent-notifications-remove.XXXXXX")
-  trap 'status=$?; rm -rf "$stage"; exit "$status"' EXIT
-  cp "$NOTIFICATIONS_BIN" "$stage/remover.exe"
-  "$stage/remover.exe" setup-opencode remove
-)
-```
-
-A trusted release executable outside the managed runtime may also run
-`setup-opencode remove` directly on Windows. Temporary cleanup preserves the
-remover's exit status; a reported ownership conflict must still be resolved.
+On macOS, use `"$NOTIFICATIONS_BIN" setup-opencode remove`.
 
 To enable macOS desktop on an update, supply the verified `--native-app` source
 unless the existing managed helper already meets the required protocol. Removal
@@ -346,48 +283,3 @@ capacity until the native promise settles, including on 2.0.0 where abort signal
 are ignored. Cleanup suppresses late verification without waiting indefinitely;
 there is no delivery replay after an uncertain result. V2 2.0.0 needs a server
 restart to reload the plugin; 2.0.21 supports location reload.
-
-## Linux amd64 qualification
-
-On 2026-09-29, a fresh disposable Linux amd64 project and isolated OpenCode
-profile loaded the bundle from Notifications commit
-`2da9d192b1863f9d2220e760ad3fc47177ae15d2`.
-The test used OpenCode 1.18.33 and a locally built Linux amd64 binary
-(`sha256:5a83226dedb208c80c2597b5fa48de745bbbf6ddb5f7afdf4b7d95f7c111ee54`).
-The bundle source hash was
-`sha256:0148e31bbd1b9bca49c674689a5f621a26d72142974b9cc663b8a96f72461b81`.
-The operator retained test data and logs in the disposable sandbox. No agent
-command ran in a product checkout.
-
-- A loopback webhook received `task_complete`, `question`,
-  `permission_request`, and `opencode_error` from the loaded OpenCode plugin.
-  The question came from a native `question.asked` triggered through the
-  OpenCode SDK with the question tool enabled. The error came from a test
-  request for a nonexistent model. Captured payloads contained none of the
-  test prompt markers.
-- With a private D-Bus session and test implementation of
-  `org.freedesktop.Notifications`, the loaded plugin made one `Notify` call
-  for a completed turn and one for a terminal error. Each call used generic
-  product copy; no duplicate call was observed in those runs.
-- `install`, `update` between desktop and webhook consent, and `remove`
-  completed. While the OpenCode server still held the old plugin in memory,
-  a new error after `remove` produced no webhook request.
-
-One-shot `opencode run` can exit after printing an answer before asynchronous
-notification delivery finishes. The persistent OpenCode server runs above
-verified both loaded desktop outcomes. This MVP is best effort at process
-shutdown; it does not promise delivery after the host exits.
-
-### Visible desktop check (2026-09-30)
-
-A second disposable, Git-initialized test project used the merged Notifications
-binary (`sha256:a1a70f35a6fbdd40ac50123dca5582c6fb4fe6e88724427bfc5f7e8d0460e7aa`)
-and OpenCode 1.18.33. `setup-opencode install --desktop` created a mode-0755
-managed executable and a mode-0600 global plugin. The loaded OpenCode config
-listed only that plugin. In a private D-Bus session with a real `dunst` daemon
-and Xvfb display, native completion, question, permission, and error events each
-rendered one visible system banner (`dunstctl count displayed` was 1 at each
-capture). The banners used generic text and omitted the test prompt markers.
-The [four captured banners](evidence/opencode-1.18.33-x11-notifications.png)
-show the actual X11 pixels, in that order. This qualifies the Linux X11/dunst
-path, not every desktop environment or the OpenCode desktop app's own switches.

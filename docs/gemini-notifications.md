@@ -1,10 +1,10 @@
 # Gemini CLI notifications
 
-Gemini support is available on macOS amd64/arm64, Linux amd64/arm64 and Windows amd64 through the
+Gemini support is available on macOS (Apple Silicon and Intel) through the
 [platform channels](PLATFORM_RELEASE_CHANNELS.md).
 
-The integration was tested with exact **Gemini CLI 0.62.0** on macOS arm64/Intel, Linux amd64/arm64 and Windows amd64. Tests use the real CLI and its permission UI with a deterministic local
-provider; they do not call the live Google model service. See qualification by OS below.
+The integration was tested with exact **Gemini CLI 0.62.0** on macOS arm64 and Intel. Tests use the real CLI and its permission UI with a deterministic local
+provider; they do not call the live Google model service.
 
 ## Two fixed alerts
 
@@ -30,7 +30,7 @@ capabilities. Claude/Codex capabilities and OpenCode limits remain separate.
 
 ## Installation
 
-Install Gemini CLI and make `gemini` available on `PATH`. The installer does not impose version minimums, maximums or exact-version allowlists. On macOS, Linux or Windows, use the public platform installer
+Install Gemini CLI and make `gemini` available on `PATH`. The installer does not impose version minimums, maximums or exact-version allowlists. On macOS, use the public platform installer
 shown below. Its source bundle and binaries come from the same qualified release.
 The installer selects the matching native assets automatically.
 
@@ -40,15 +40,14 @@ CLI versions do not gate installation, including prereleases. An installed CLI
 must still provide the hooks and settings capabilities used by the integration;
 actual command or schema failures are reported at that boundary.
 
-Native CI keeps exact 0.62.0 baseline coverage on five platforms and exact
-0.65.0 coverage on Linux amd64 and macOS arm64. These pins make tests
+Native CI keeps exact 0.62.0 baseline coverage on macOS arm64 and Intel. These pins make tests
 reproducible; they do not limit the versions users may install. Each run records
 the actual version, upstream source and installed package hashes. The historical
 results below retain their original scope and do not qualify every CLI version.
 
 ### Platform installer selectors
 
-On macOS, Linux or Windows, use:
+On macOS, use:
 
 ```bash
 (set -o pipefail; curl -fsSL https://agent-notifications.com/install.sh | bash -s -- --product gemini --desktop)
@@ -68,9 +67,7 @@ OpenCode, with consent persisted separately per agent. They do not grant or chan
 Claude/Codex notification channels. `--skip-agent-notify` affects only Claude/Codex
 portable MCP/skill setup. Legacy `--product both` remains Claude + Codex.
 The piped loader, interactive menu and all-four installation were qualified
-in an isolated Linux TEST profile with real AN installers. Claude registration used
-a metadata fixture. The installer evidence records qualification before publication;
-current public versions are recorded in the platform channels linked above. This historical installer evidence does not qualify newer release bytes.
+on macOS. Current public versions are recorded in the platform channels linked above.
 See [installer evidence](handoffs/gemini-installer-e2e.md).
 
 ## Settings, duplicates and lifecycle
@@ -98,25 +95,23 @@ or cache loss can permit duplicates outside this bounded guarantee.
 
 Restart Gemini after setup or update so its effective hooks are reloaded. Use the
 installer's printed inspect, channel-change, remove and recovery commands;
-installation, repeat, update, inspect and removal were exercised on all five native CI targets.
+installation, repeat, update, inspect and removal were exercised on macOS.
 Removal revokes Gemini consent and removes only owned hooks/runtime files, preserving foreign settings and
 other agents. An ownership conflict may retain disabled files for inspection rather
 than overwrite another writer's edits.
 
 ## Qualification status
 
-The native CLI and production lifecycle checks passed on all five targets for the exact v1.49.1 source in [run 38269416372](https://github.com/777genius/agent-notifications/actions/runs/38269416372). These checks use a local provider and webhooks; they do not establish desktop visibility. The desktop observations below are historical evidence from the integration qualification.
+The native CLI and production lifecycle checks passed on macOS for the exact v1.49.1 source in [run 38269416372](https://github.com/777genius/agent-notifications/actions/runs/38269416372). These checks use a local provider and webhooks; they do not establish desktop visibility. The desktop observations below are historical evidence from the integration qualification.
 
 | Evidence layer | Status |
 | --- | --- |
-| Exact Gemini CLI 0.62.0 native hooks and permission UI | Passed on macOS arm64/Intel, Linux amd64/arm64 and Windows amd64, with a local provider fixture |
+| Exact Gemini CLI 0.62.0 native hooks and permission UI | Passed on macOS arm64 and Intel, with a local provider fixture |
 | macOS arm64 desktop and visual test | Real CLI delivered completion and tool-permission alerts through our signed helper; macOS accepted both and the owner confirmed seeing both |
-| Windows amd64 native shell / notification API / visual desktop | Native CLI, production lifecycle and webhook passed; notification API and visual desktop unverified |
-| Linux amd64/arm64 native shell and webhook / desktop | Native CLI and production install/update/remove/webhook passed; desktop API and visual desktop unverified |
 | macOS Intel native CLI | Native CLI, production lifecycle and webhook passed; visual desktop unverified |
-| Public Agent Notifications availability | macOS amd64/arm64, Linux amd64/arm64 and Windows amd64; see [current platform versions](PLATFORM_RELEASE_CHANNELS.md) |
+| Public Agent Notifications availability | macOS amd64/arm64; see [current platform versions](PLATFORM_RELEASE_CHANNELS.md) |
 
-A macOS observation will not imply Windows/Linux GUI verification. Injected
+A macOS observation will not imply other platform GUI verification. Injected
 contracts, actual CLI with a local provider fixture (`native_cli/provider_substitute`)
 and live model-service tests are reported separately. Native tests covered equal
 turns, permission approval/denial/cancellation, recovery to another turn, changed

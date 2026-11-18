@@ -10,6 +10,8 @@ type sendOptions struct {
 	hookPresentation          *HookPresentation
 	executionContext          context.Context
 	runtimeRoot, nativeHelper string
+	hookEvent                 string
+	sessionID                 string
 }
 
 // WithInstalledRuntime supplies paths already verified by the installation
@@ -37,6 +39,13 @@ func WithHookPresentation(content HookPresentation) SendOption {
 // centre and is visible once the user is available again.
 func WithoutSound() SendOption {
 	return func(o *sendOptions) { o.muteSound = true }
+}
+
+// WithHookEvent supplies the hook event name (e.g., "Stop", "Notification")
+// for sound deduplication. Combined with sessionID, this ensures a sound
+// plays only once per session per hook event within the dedup window.
+func WithHookEvent(hookEvent string) SendOption {
+	return func(o *sendOptions) { o.hookEvent = hookEvent }
 }
 
 // resolveSendOptions folds the variadic options into a value. A nil option is

@@ -38,6 +38,39 @@ var uniqueNotificationGroupSeq atomic.Uint64
 
 const notificationGroupPrefix = "claude-notif-"
 
+// playNotificationBinaryName is the name of the play-notification binary
+const playNotificationBinaryName = "play-notification"
+
+// findPlayNotificationBinary locates the play-notification binary.
+// Checks: 1) CLAUDE_PLUGIN_ROOT/bin/, 2) executable's directory, 3) executable's bin/ subdirectory.
+// Returns empty string if not found.
+func findPlayNotificationBinary() string {
+	// First check CLAUDE_PLUGIN_ROOT (used in tests and installed plugin)
+	if pluginRoot := os.Getenv("CLAUDE_PLUGIN_ROOT"); pluginRoot != "" {
+		candidate := filepath.Join(pluginRoot, "bin", playNotificationBinaryName)
+		if platform.FileExists(candidate) {
+			return candidate
+		}
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	exeDir := filepath.Dir(exe)
+	// Check in the same directory as the current executable
+	candidate := filepath.Join(exeDir, playNotificationBinaryName)
+	if platform.FileExists(candidate) {
+		return candidate
+	}
+	// Check in bin/ subdirectory (for development)
+	candidate = filepath.Join(exeDir, "bin", playNotificationBinaryName)
+	if platform.FileExists(candidate) {
+		return candidate
+	}
+	return ""
+}
+
 // NotificationPermissionDeniedError indicates macOS rejected the native
 // ClaudeNotifier path because notification permission is denied for the app.
 type NotificationPermissionDeniedError struct {
@@ -90,6 +123,8 @@ func isTimeSensitiveStatus(status analyzer.Status) bool {
 // (used when the desktop is in Do Not Disturb).
 func (n *Notifier) SendDesktop(status analyzer.Status, message, sessionID, cwd string, opts ...SendOption) error {
 	sendOpts := resolveSendOptions(opts)
+	// Pass sessionID to sendOpts for sound deduplication
+	sendOpts.sessionID = sessionID
 
 	// Send terminal bell for terminal tab indicators (e.g. Ghostty, tmux,
 	// Windows Terminal). Platform-specific; see bell_other.go / bell_windows.go.
@@ -733,14 +768,15 @@ func (n *Notifier) playSoundUnlessMuted(sound string, opts sendOptions) {
 		logging.Debug("Sound suppressed for this notification (muted delivery)")
 		return
 	}
-	n.playSoundDetached(sound)
+	n.playSoundDetached(sound, opts)
 }
 
-// playSoundDetached spawns a detached child process to play the sound.
+// playSoundDetached spawns a detached child process to play the sound using
+// the play-notification binary which handles deduplication.
 // The parent hook process does not wait for audio to finish, eliminating
 // the ~3.6s delay from notifier.Close() wg.Wait().
 // Falls back to playSoundAsync (inline playback) if spawn fails.
-func (n *Notifier) playSoundDetached(sound string) {
+func (n *Notifier) playSoundDetached(sound string, opts sendOptions) {
 	if !n.cfg.Notifications.Desktop.Sound || sound == "" {
 		return
 	}
@@ -750,23 +786,33 @@ func (n *Notifier) playSoundDetached(sound string) {
 		return
 	}
 
-	exe, err := os.Executable()
-	if err != nil {
-		logging.Warn("Cannot resolve executable for detached sound, falling back to inline: %v", err)
+	// Find the play-notification binary
+	playNotifBinary := findPlayNotificationBinary()
+	if playNotifBinary == "" {
+		logging.Warn("play-notification binary not found, falling back to inline playback")
 		n.playSoundAsync(sound)
 		return
 	}
 
-	args := []string{"play-sound", sound}
+	args := []string{"-sound", sound}
 	volume := n.cfg.Notifications.Desktop.Volume
 	if volume >= 0 && volume < 1.0 {
-		args = append(args, "--volume", fmt.Sprintf("%.2f", volume))
+		args = append(args, "-volume", fmt.Sprintf("%.2f", volume))
 	}
 	if device := n.cfg.Notifications.Desktop.AudioDevice; device != "" {
-		args = append(args, "--device", device)
+		args = append(args, "-device", device)
 	}
 
-	cmd := execCommand(exe, args...)
+	// Add deduplication parameters if available
+	if opts.sessionID != "" {
+		args = append(args, "-session", opts.sessionID)
+	}
+	if opts.hookEvent != "" {
+		args = append(args, "-hook", opts.hookEvent)
+	}
+	// Use default dedup window of 3 seconds
+
+	cmd := execCommand(playNotifBinary, args...)
 	platform.SetDetachedProcAttr(cmd)
 	// Hand the child the debug log file as stderr so its playback outcome is
 	// not lost to /dev/null. It must be an *os.File: any other writer makes
@@ -776,12 +822,12 @@ func (n *Notifier) playSoundDetached(sound string) {
 	}
 
 	if err := cmd.Start(); err != nil {
-		logging.Warn("Failed to spawn detached sound process, falling back to inline: %v", err)
+		logging.Warn("Failed to spawn play-notification process, falling back to inline: %v", err)
 		n.playSoundAsync(sound)
 		return
 	}
 
-	logging.Debug("Detached sound process spawned: pid=%d sound=%s", cmd.Process.Pid, sound)
+	logging.Debug("play-notification process spawned: pid=%d sound=%s session=%s hook=%s", cmd.Process.Pid, sound, opts.sessionID, opts.hookEvent)
 	// Do NOT call cmd.Wait() — child process runs independently
 }
 

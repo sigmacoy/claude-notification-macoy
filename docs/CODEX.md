@@ -7,27 +7,26 @@ The same binary can notify for OpenAI Codex CLI sessions.
 ### Setup
 
 Use the [one-command installer](INSTALLATION.md#quick-install-recommended) and choose Codex or both.
-It downloads matching release source and binaries, registers the hooks, and keeps a stable
+It downloads the matching macOS release source and binaries, registers the hooks, and keeps a stable
 runtime copy. Then start Codex and approve the entries in `/hooks`.
 
-### Manual Codex registration
+### Manual Codex registration (macOS only)
 
-Skip this section if you used the one-command installer. For manual setup, download and extract the source bundle for the release selected by your [platform channel](PLATFORM_RELEASE_CHANNELS.md). Download that same release's native executable for your OS/architecture, verify it against `checksums.txt`, and place it in the bundle's `bin/` directory under its published asset name. Use matching source and binaries, not source from `main` with an older release binary.
+Skip this section if you used the one-command installer. For manual setup on macOS, download and extract the source bundle for the release selected by your [platform channel](PLATFORM_RELEASE_CHANNELS.md). Download that same release's native macOS executable for your architecture (Intel: `darwin-amd64`, Apple Silicon: `darwin-arm64`), verify it against `checksums.txt`, and place it in the bundle's `bin/` directory under its published asset name. Use matching source and binaries, not source from `main` with an older release binary.
 
-Invoke that executable directly. The source archive's launcher symlinks can point to a different platform, and Windows `.bat` launchers are created during setup. For example, from the extracted bundle directory on Linux amd64:
+Invoke that executable directly from the extracted bundle directory:
 
 ```bash
-chmod +x bin/claude-notifications-linux-amd64
-./bin/claude-notifications-linux-amd64 setup-codex --plugin-root .
+# macOS Apple Silicon
+chmod +x bin/claude-notifications-darwin-arm64
+./bin/claude-notifications-darwin-arm64 setup-codex --plugin-root .
+
+# macOS Intel
+chmod +x bin/claude-notifications-darwin-amd64
+./bin/claude-notifications-darwin-amd64 setup-codex --plugin-root .
 ```
 
-For Linux arm64 or macOS, substitute the matching published filename (`claude-notifications-linux-arm64`, `claude-notifications-darwin-amd64` or `claude-notifications-darwin-arm64`). For macOS desktop delivery, also verify and extract the same release's `ClaudeNotifier.app.zip` into `bin/`, retaining both `ClaudeNotifier.app` and its `ClaudeNotifier.app.managed-runtime.json` sidecar. The [public installer](INSTALLATION.md#quick-install-recommended) handles this acquisition automatically.
-
-On Windows, run the matching downloaded executable from the bundle directory in PowerShell:
-
-```powershell
-.\bin\claude-notifications-windows-amd64.exe setup-codex --plugin-root .
-```
+For macOS desktop delivery, also verify and extract the same release's `ClaudeNotifier.app.zip` into `bin/`, retaining both `ClaudeNotifier.app` and its `ClaudeNotifier.app.managed-runtime.json` sidecar. The [public installer](INSTALLATION.md#quick-install-recommended) handles this acquisition automatically.
 
 The Go registration command needs no `jq`. It creates platform launchers in the installed runtime but does not add them to `PATH`.
 
@@ -91,7 +90,6 @@ Known limitations:
 - The error statuses for Codex come from a text heuristic over the final message (short messages
   with failure phrasing), not from structured error data - false negatives are possible.
 - The `request_user_input` question hook is limited to the modes where Codex exposes that tool.
-- Native Windows hook-chain checks passed for the [v1.47.0 prerelease](https://github.com/777genius/agent-notifications/releases/tag/v1.47.0); those checks do not establish visible desktop banners or sounds.
 - Codex hooks require a trust review (`/hooks` inside Codex); changed definitions require review again.
 
 Both products share one config file (the shared file selected by `config path`).

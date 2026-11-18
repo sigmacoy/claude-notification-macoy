@@ -6,13 +6,12 @@ release commit, an immutable source commit, and its platform branch.
 
 | Platform | Qualified version | Source branch |
 | --- | --- | --- |
-| Linux amd64 / arm64, Windows amd64 | 1.49.11 | `release/platform-linux-windows` |
 | macOS amd64 / arm64 | 1.49.11 | `release/platform-macos` |
 
-All five platform rows, GitHub Latest and main manifests select 1.49.11. This
-complete asset set includes Linux, Windows and macOS native/portable packages and
-the signed, notarized macOS helper. Release checks use the owner-approved basic
-five-platform artifact profile and separate macOS E2E. The eleven-cell OpenCode
+Both macOS rows, GitHub Latest and main manifests select 1.49.11. This
+complete asset set includes macOS native/portable packages and
+the signed, notarized macOS helper. Release checks use the owner-approved
+macOS artifact profile and separate macOS E2E. The eleven-cell OpenCode
 installed-business suite was not run; these checks do not establish full native,
 clock/source-epoch, visible desktop or cold-start qualification. A platform channel can also select an explicitly
 qualified partial release even when GitHub labels it Pre-release.
@@ -39,7 +38,7 @@ marketplace removal or plugin uninstall for channel migration.
 
 Explicit release/installer URL overrides keep their operator semantics. A local
 bundle's repair installer downloads its own manifest version, so an older macOS
-release cannot silently downgrade a newer Linux/Windows bundle. A channel older
+release cannot silently downgrade a newer macOS bundle. A channel older
 than an installed Claude version is rejected.
 
 ## Promotion order
@@ -77,5 +76,4 @@ listed in [the release checklist](RELEASE.md#claudenotifierapp-macos).
 
 After an authorized candidate publication, follow the promotion order above for
 both macOS rows only. Retain the currently qualified macOS version until that
-candidate's public assets and source provenance are verified; preserve unrelated
-Linux/Windows rows and global Latest.
+candidate's public assets and source provenance are verified.

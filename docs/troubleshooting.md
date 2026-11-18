@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common installation and runtime issues.
+Common installation and runtime issues for macOS.
 
 ## OpenCode notifications missing or duplicated
 
@@ -15,8 +15,6 @@ Common installation and runtime issues.
   and `setup-opencode request-permission`. Check ClaudeNotifier in System
   Settings > Notifications and Focus. Missing/damaged attestation requires a
   verified native helper update, not an unverified fallback.
-- On Linux, verify an active desktop notification service and session D-Bus.
-  On Windows, install natively via Git Bash and check OS notification settings.
 - Duplicate banners can come from OpenCode's native Agent/Permissions/Errors
   switches or another notification plugin. Disable the overlapping source.
 - Silent alerts and no click-to-focus are expected for OpenCode. One-shot host
@@ -76,72 +74,6 @@ On first use the binary requests Screen Recording access automatically — a mac
 
 Once granted, the correct VS Code window will be raised even if it is on a different Space.
 
-## Ubuntu 24.04: `EXDEV: cross-device link not permitted` during `/plugin install`
-
-### Symptom
-
-Plugin installation fails with an error similar to:
-
-```
-EXDEV: cross-device link not permitted, rename '.../.claude/plugins/cache/...' -> '/tmp/claude-plugin-temp-...'
-```
-
-### Why it happens
-
-Claude's plugin installer attempts to move a plugin directory from `~/.claude/...` into `/tmp/...` using `rename()`.
-On many Linux systems (including Ubuntu 24.04), `/tmp` is mounted as `tmpfs` (a different filesystem/device), so cross-device `rename()` fails with `EXDEV`.
-
-### Fix (recommended)
-
-Set a temporary directory on the same filesystem as your `~/.claude` (usually under `$HOME`) and start Claude from that environment:
-
-```bash
-mkdir -p "$HOME/.claude/tmp"
-TMPDIR="$HOME/.claude/tmp" claude
-```
-
-Then retry:
-
-```text
-/plugin install claude-notifications-go@claude-notifications-go
-```
-
-### Diagnostics (optional)
-
-```bash
-df -T "$HOME" /tmp
-mount | grep -E ' on /tmp | on /home '
-```
-
-If `/tmp` is `tmpfs` (or otherwise on a different device) and `$HOME` is on `ext4/btrfs/...`, the error is expected without the `TMPDIR` workaround.
-
-## Linux: click-to-focus opens the wrong window
-
-### Symptom
-
-Clicking a notification focuses the wrong terminal window, a stale Terminator window, or does nothing.
-
-### Quick diagnostics
-
-Reproduce the failed click first, then run:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/777genius/agent-notifications/main/scripts/linux-focus-debug.sh | bash
-```
-
-The script generates a report file in the current directory with:
-
-- `XDG_SESSION_TYPE`, `DISPLAY`, `WAYLAND_DISPLAY`, `TERM_PROGRAM`, `TERMINATOR_UUID`, `WINDOWID`
-- installed plugin version/path and marketplace source
-- available focus tools like `xdotool`, `wmctrl`, and `remotinator`
-- active-window data, `wmctrl` window lists, `xdotool` searches, and recent plugin log lines
-
-Review the file before posting it publicly, because it may include local file paths and window titles.
-
-### Why this helps
-
-Linux click-to-focus behavior depends on the session type, terminal, window manager, and available focus tools. The diagnostic script captures the exact environment needed to explain why the plugin focused the wrong window or could not focus anything at all.
-
 ## The notification sound plays even though Do Not Disturb is on
 
 ### Symptom
@@ -179,22 +111,18 @@ behaviour.
 Detection deliberately fails open: anything it cannot read counts as "not in
 DND", so the notification is delivered. Check, in order:
 
-1. **Platform.** Detection is Linux-only right now. macOS Focus modes and Windows
-   Focus Assist are not detected, so the option has no effect there. See
+1. **Platform.** Detection for macOS Focus modes is supported. See
    [DO_NOT_DISTURB.md](DO_NOT_DISTURB.md).
 2. **The value is spelled correctly.** An unrecognised value falls back to
    `"off"` and logs `Unknown respectDoNotDisturb value ...` rather than failing
    the config, so a typo looks exactly like the feature being switched off.
-3. **Your desktop actually exposes the state.** Run the probe for your daemon:
+3. **Your desktop actually exposes the state.** Run the probe for macOS:
 
    ```bash
-   gdbus call --session --dest org.freedesktop.Notifications      --object-path /org/freedesktop/Notifications      --method org.freedesktop.DBus.Properties.Get      org.freedesktop.Notifications Inhibited   # KDE Plasma and spec-compliant daemons
-   dunstctl is-paused                                            # dunst
-   xfconf-query -c xfce4-notifyd -p /do-not-disturb              # XFCE
-   gsettings get org.gnome.desktop.notifications show-banners    # GNOME: false means DND
+   defaults read com.apple.ncprefs dnd_prefs
    ```
 
-   If none of these reports DND while your desktop says it is on, the plugin has
+   If this does not report DND while your desktop says it is on, the plugin has
    no source to read and will keep delivering.
 4. **Which source fired.** With debug logging on, look for a `DND: active (...)`
    line in the plugin log. If the outcome looks right but the source is not the
@@ -203,78 +131,5 @@ DND", so the notification is delivered. Check, in order:
 ### Related: the terminal bell still rings
 
 `"silent"` mutes the plugin's sound, not the terminal bell - BEL is a tab
-indicator on Ghostty, tmux and Windows Terminal, and whether it makes noise is
+indicator on Ghostty, tmux and other terminals, and whether it makes noise is
 your terminal's own setting. Set `"terminalBell": false` to turn it off.
-
-## Windows: installer says Linux or installs `linux-amd64`
-
-### Symptom
-
-You run the bootstrap command from Windows Terminal or PowerShell, but the output says `Platform: Linux`, uses paths under `/home/...`, or mentions `claude-notifications-linux-amd64`.
-
-### Why it happens
-
-PowerShell and Windows Terminal can resolve `bash` to WSL. In that case the installer is running inside Linux, not Git Bash, so Linux platform detection is technically correct but not useful for Windows Claude.
-
-The installer and bootstrap stop with `WSL environment detected` when they see `WSL_DISTRO_NAME`, `WSL_INTEROP`, a Microsoft/WSL kernel in `/proc/version`, or WSL-only markers (`/proc/sys/fs/binfmt_misc/WSLInterop`, `/run/WSL`). The markers catch WSL bash launched from PowerShell even when the `WSL_*` variables are not exported.
-
-### Fix
-
-Open Git Bash from the Start menu and run the [secure install command](INSTALLATION.md#quick-install-recommended) there. Do not run it from PowerShell if `bash` opens WSL.
-
-For an intentional WSL installation, add `CLAUDE_NOTIFICATIONS_ALLOW_WSL=1` to the `env` invocation on the final line of that command.
-
-## Windows: install issues related to `%TEMP%` / `%TMP%` location
-
-If your temp directory is on a different drive than your user profile (or where Claude stores plugin cache), you may see similar cross-device move issues.
-
-### Fix
-
-Make sure `%TEMP%` and `%TMP%` point to a directory on the same drive as `%USERPROFILE%` (or where Claude stores its plugin directories), then restart your terminal/app.
-
-## Windows: hooks do not fire or notifications are silent
-
-### Symptom
-
-The plugin is installed and its Windows executable exists, but Claude does not show notifications for `Stop`, `ExitPlanMode`, `AskUserQuestion`, or `permission_prompt`.
-
-### Why it happens
-
-An older installation may still contain shell wrapper or PowerShell hook commands. The current Windows runtime uses the native `.exe` directly with an `args` array, so Claude passes the hook payload through stdin without a shell.
-
-### Fix
-
-Run the bootstrap installer again, then restart Claude. Bootstrap forces a managed runtime refresh, which updates this plugin's hook entries in `hooks/hooks.json` while preserving unrelated hooks and metadata. `/claude-notifications-go:init` alone can return early when the binary and launchers already exist, leaving old hooks unchanged.
-
-To inspect the native hook configuration generated by the installed executable, replace `<arch>` with `amd64` or `arm64` and run:
-
-```powershell
-.\bin\claude-notifications-windows-<arch>.exe windows-hooks
-```
-
-This command only prints JSON. Do not replace `hooks/hooks.json` with its output: that would remove entries owned by other plugins. If a manually added PowerShell hook remains after bootstrap, inspect `hooks/hooks.json` and remove only the obsolete command pointing to this plugin. The managed refresh cannot identify that custom command as one of its own, so it preserves it alongside the native hook.
-
-### Note about beeep logs
-
-If the log contains `beeep.Notify returned a Windows toast false positive after PowerShell fallback`, the COM toast path failed but the PowerShell fallback returned success. Treat it as harmless unless no popup appears.
-
-## Windows / Git Bash: binary download fails from GitHub Releases
-
-### Symptom
-
-Bootstrap or `/claude-notifications-go:init` installs the plugin itself, but downloading `claude-notifications-windows-<arch>.exe` fails with an empty or generic network error.
-
-### Why it happens
-
-`raw.githubusercontent.com` and `github.com` may still work, but release assets are served from GitHub's release CDN. On corporate Windows machines, Git Bash `curl` often fails there because of:
-
-- Proxy authentication or missing proxy environment variables
-- TLS inspection with an untrusted corporate root CA
-- Schannel certificate revocation checks blocking the request
-
-### What to check
-
-1. If your company requires a proxy, make sure the terminal running Claude or bootstrap has `HTTPS_PROXY`, `HTTP_PROXY`, or `ALL_PROXY` configured.
-2. If your network inspects TLS traffic, ensure Git Bash `curl` trusts the corporate CA certificate.
-3. Retry from another network or from WSL to confirm whether the issue is network-specific.
-4. As a fallback, open the latest release page, download the matching `claude-notifications-windows-amd64.exe` or `claude-notifications-windows-arm64.exe`, place it into the plugin `bin` directory, and then re-run `/claude-notifications-go:init`.

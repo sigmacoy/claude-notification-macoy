@@ -10,7 +10,7 @@ This wizard edits the single shared configuration for Claude, Codex, and future 
 
 ## 1. Discover the executable and inspect
 
-Use the adapter's recorded installation or `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` to locate the installed executable and sound resources. Honor the existing `CLAUDE_NOTIFICATIONS_BIN` executable override. Select the binary for the current platform (including the native Windows `.exe`); do not run another platform's binary or scan caches for the newest version. These locations select resources only, never the user config.
+Use the adapter's recorded installation or `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` to locate the installed executable and sound resources. Honor the existing `CLAUDE_NOTIFICATIONS_BIN` executable override. This plugin is macOS only — use the macOS universal binary. These locations select resources only, never the user config.
 
 Set `NOTIFICATIONS_BIN` to that verified executable, then run:
 
@@ -72,7 +72,7 @@ Summarize only requested changes, redacting secret values, and confirm ambiguous
 
 Use JSON Pointer escaping (`~0` for `~`, `~1` for `/`) where needed. Set values are raw JSON; `null` is not deletion. `remove` contains only explicitly requested removals. No root replacement, parent-object replacement, overlapping operations or schemaVersion edit. Arrays may only be replaced as a whole when explicitly requested and supported by the CLI validator.
 
-Create a private temporary directory with `umask 077` and `mktemp -d`, disable tracing BEFORE handling input, and write only the requested patch there. Use a JSON serializer through private input for arbitrary answers; never interpolate answers into shell code, command arguments, unquoted heredocs, or `eval`. Never show the patch if it contains credentials. On Windows ensure a current-user/SYSTEM private ACL for temporary input; POSIX mode bits alone do not prove Windows privacy. If a private input location is unavailable, stop without writing.
+Create a private temporary directory with `umask 077` and `mktemp -d`, disable tracing BEFORE handling input, and write only the requested patch there. Use a JSON serializer through private input for arbitrary answers; never interpolate answers into shell code, command arguments, unquoted heredocs, or `eval`. Never show the patch if it contains credentials. If a private input location is unavailable, stop without writing.
 
 For the non-secret two-edit example above, this Bash recipe preserves the literal placeholder. `REVISION` is the opaque metadata token from inspect, not a setting value:
 

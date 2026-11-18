@@ -1,8 +1,7 @@
 # Basic release preparation and recovery
 
 Use this alongside [RELEASE.md](RELEASE.md). The basic profile still requires
-current-source CI, five native artifact proofs, same-source macOS signing and
-separate downloaded-draft macOS/Codex checks. This procedure does not authorize
+current-source CI, macOS signing and separate downloaded-draft macOS/Codex checks. This procedure does not authorize
 an eleven-cell, physical Intel, live-provider, visible-desktop or cold-start claim.
 
 ## Prepare once, run independent work together
@@ -78,7 +77,7 @@ make release-canary SEALED_DIR=/absolute/original-seal RELEASE_ID=NUMERIC_ID \
   CANARY_SCRATCH=/absolute/private-scratch CANARY_STATE=draft
 ```
 
-On macOS or Linux, the command validates the original seal and source tag,
+On macOS, the command validates the original seal and source tag,
 downloads only the local host executable by immutable asset ID, checks its size/SHA256, and runs the
 canonical isolated version and synthetic Claude/Codex Stop canary. Each product
 must deliver once to a local recording sink; duplicate replay must deliver
@@ -209,24 +208,6 @@ failed or cancelled native runs cannot inherit an older success. Native receipt
 checks join successful earlier shards with the
 latest execution of each retried job; a newer failure never inherits old green.
 
-Ubuntu runs command tests, remaining packages, the real-cache cursorevent package
-and installer/native checks independently for both Go versions. The existing
-`Test on Ubuntu (1.25)` / `(1.26)` aggregate checks require every shard and all
-atomic coverage profiles. On failure, rerun only the failed job; after recovery,
-rerun any failed aggregate/evidence job without repeating successful shards.
-Do not extend production deadlines or weaken assertions to obtain green CI.
-
-Windows runs Go/observation tests and installer/native E2E independently for both
-Go versions. The existing `Test on Windows (1.25)` / `(1.26)` aggregate checks
-require both lanes and the complete atomic Go coverage. Native input receipts
-include both lane rosters; an old one-job Windows receipt cannot qualify this
-workflow. Retry only a failed lane and its incomplete aggregate/receipt jobs.
-
-Repeated finite Go TEST programs are compiled once per test process and copied
-into a fresh private executable for each test. Their source/toolchain identity
-and process-owned build cache do not qualify release binaries or share runtime
-profiles. Mutation of one fixture cannot change another test's executable.
-
 On a draft/upload failure, use the existing `resume_run`/`resume_attempt` inputs.
 Authenticated paginated discovery finds drafts that the published-tag endpoint
 cannot return, revalidates their release IDs, and rejects duplicate/conflicting
@@ -252,27 +233,3 @@ activation, business delivery, banners or callbacks. Keep those separate actual
 TEST observations and the independent technical review. A failed verification
 requires repairing only the mismatched delivery phase, never rebuilding the
 immutable released tag.
-
-## Runner queues and CLI shards
-
-Trusted Ubuntu Go 1.25 and 1.26 jobs use `CI_LINUX_RUNNER` when configured,
-with the existing GitHub-hosted fallback for external fork PRs. Final macOS and
-recovery input receipts also use that Linux runner; the native qualification
-itself remains on its original operating system. The frozen Cursor physical
-Ubuntu/kernel qualification runs as a separate required `cursor-physical` job on
-`ubuntu-24.04`; its exact positive markers and retained evidence remain required. This changes scheduling,
-not the scope or authority of a successful receipt.
-
-Ubuntu command tests run as complementary `cmd-setup` and `cmd-other` groups.
-The setup group selects top-level `TestSetupWizard*` and `TestSetupCodex*` tests;
-the other group skips exactly that pattern and retains future tests, examples
-and fuzz seed execution. Subtests remain attached to their parent. Both groups
-retain race detection, atomic coverage and the existing test deadline.
-The aggregate requires all four profiles (`cmd-setup`, `cmd-other`, `packages`,
-`cursorevent`), merges matching CLI blocks by summing counts, and rejects missing,
-header-only or inconsistent profiles. Both groups are part of native input
-custody, so a missing group cannot qualify a release.
-
-Compare job execution separately from waiting for runners. More parallel jobs
-can reduce execution time while capacity queues still dominate total duration;
-measure an actual current-head run before claiming an end-to-end improvement.
